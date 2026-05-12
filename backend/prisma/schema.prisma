@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum CampaignApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CampaignLifecycleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DONE
+}
+
+enum CommentModerationStatus {
+  PENDING
+  VISIBLE
+  REJECTED
+}
+
+enum DonationVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaigns Campaign[]
+  comments  Comment[]
+}
+
+model Campaign {
+  id              String                  @id @default(uuid())
+  slug            String                  @unique
+  title           String
+  description     String
+  imageUrl        String
+  imageUrls       String[]                @default([])
+  goalAmount      Float
+  raisedAmount    Float                   @default(0)
+  lifecycleStatus CampaignLifecycleStatus @default(DRAFT)
+  approvalStatus  CampaignApprovalStatus  @default(PENDING)
+  recipientName   String
+  recipientNote   String
+  authorId        String
+  author          User                    @relation(fields: [authorId], references: [id])
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  comments  Comment[]
+  donations Donation[]
+}
+
+model Comment {
+  id               String                  @id @default(uuid())
+  campaignId       String
+  campaign         Campaign                @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User                    @relation(fields: [authorId], references: [id])
+  body             String
+  moderationStatus CommentModerationStatus @default(PENDING)
+  createdAt        DateTime                @default(now())
+}
+
+model Donation {
+  id                      String                       @id @default(uuid())
+  campaignId              String
+  campaign                Campaign                     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  donorDisplayName        String
+  amount                  Float
+  trackingNumber          String                       @default("")
+  branch                  String                       @default("")
+  fundraisingReference    String                       @default("")
+  /** Set when paid via Stripe Checkout — used for webhook idempotency */
+  stripeCheckoutSessionId String?                      @unique
+  /** Set when paid via embedded Payment Element — webhook idempotency */
+  stripePaymentIntentId   String?                      @unique
+  verificationStatus      DonationVerificationStatus @default(PENDING)
+  createdAt               DateTime                     @default(now())
+}
