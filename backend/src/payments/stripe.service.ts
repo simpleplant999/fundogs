@@ -62,6 +62,13 @@ export class StripeService {
         campaign_slug: opts.campaignSlug,
         donor_display_name: opts.donorDisplayName.slice(0, 200),
       },
+      /** Session metadata is NOT copied onto the PaymentIntent — webhooks often only receive `payment_intent.succeeded`. */
+      payment_intent_data: {
+        metadata: {
+          campaign_slug: opts.campaignSlug,
+          donor_display_name: opts.donorDisplayName.slice(0, 200),
+        },
+      },
       success_url: `${frontend}/campaigns/${slugEnc}?donated=stripe&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontend}/campaigns/${slugEnc}?donated=cancel`,
     });
@@ -95,6 +102,16 @@ export class StripeService {
       throw new InternalServerErrorException('Stripe did not return a client secret');
     }
     return { clientSecret: pi.client_secret };
+  }
+
+  async retrieveCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session> {
+    return this.getStripe().checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent'],
+    });
+  }
+
+  async retrievePaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+    return this.getStripe().paymentIntents.retrieve(paymentIntentId);
   }
 
   constructWebhookEvent(payload: Buffer, signature: string): Stripe.Event {

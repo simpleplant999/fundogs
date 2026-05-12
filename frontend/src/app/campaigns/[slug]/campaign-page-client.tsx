@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
 import { CampaignShareMenu } from '@/components/campaign-share-menu';
 import { CampaignStripeDonate } from '@/components/campaign-stripe-donate';
@@ -36,21 +36,35 @@ function StatusLine({ status }: { status: Campaign['status'] }) {
   return <p className="text-sm font-medium text-amber-950/80">{copy[status]}</p>;
 }
 
-export function CampaignPageClient({ slug }: { slug: string }) {
+export type CampaignPageClientProps = {
+  slug: string;
+  /** From the server page — avoids `useSearchParams()` (which can retrigger effects every render). */
+  initialDonated?: 'stripe' | 'cancel' | null;
+  initialCheckoutSessionId?: string | null;
+  initialPaymentIntentId?: string | null;
+};
+
+export function CampaignPageClient({
+  slug,
+  initialDonated = null,
+  initialCheckoutSessionId = null,
+  initialPaymentIntentId = null,
+}: CampaignPageClientProps) {
   const { token } = useAuth();
-  const api = getClientApiBase();
+  const api = useMemo(() => getClientApiBase(), []);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [donors, setDonors] = useState<Donor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [donateBanner, setDonateBanner] = useState<string | null>(null);
   const donateHandled = useRef<string | null>(null);
+  /** While set, keep displayed raised at least this high until the API reports >= this (avoids flicker after optimistic pay). */
+  const optimisticRaisedFloorRef = useRef<number | null>(null);
 
   type LoadSnapshot =
     | { ok: false; status?: number }
-    | { ok: true; raised: number; donorCount: number };
+    | { ok: true; raised: number; donorCount: number; serverRaised: number };
 
   /** Fetches campaign + donors and updates state; does not touch `loading` or `error`. */
   const silentRefreshCampaign = useCallback(async (): Promise<LoadSnapshot> => {
@@ -65,9 +79,19 @@ export function CampaignPageClient({ slug }: { slug: string }) {
       if (!cRes.ok) return { ok: false, status: cRes.status };
       const c = (await cRes.json()) as Campaign;
       const donorList = dRes.ok ? ((await dRes.json()) as Donor[]) : [];
-      setCampaign(c);
+      const serverRaised = c.raisedAmount;
+      const floor = optimisticRaisedFloorRef.current;
+      let displayRaised = serverRaised;
+      if (floor != null) {
+        if (serverRaised >= floor) {
+          optimisticRaisedFloorRef.current = null;
+        } else {
+          displayRaised = floor;
+        }
+      }
+      setCampaign({ ...c, raisedAmount: displayRaised });
       setDonors(donorList);
-      return { ok: true, raised: c.raisedAmount, donorCount: donorList.length };
+      return { ok: true, raised: displayRaised, donorCount: donorList.length, serverRaised };
     } catch {
       return { ok: false };
     }
@@ -112,7 +136,7 @@ export function CampaignPageClient({ slug }: { slug: string }) {
         const snap = await silentRefreshCampaign();
         if (
           snap.ok &&
-          (snap.raised > raisedBefore || snap.donorCount > donorCountBefore)
+          (snap.serverRaised > raisedBefore || snap.donorCount > donorCountBefore)
         ) {
           return;
         }
@@ -131,45 +155,111 @@ export function CampaignPageClient({ slug }: { slug: string }) {
   const onDonateSuccess = useCallback(
     (info?: { amountAddedPhp: number }) => {
       const c = campaignRef.current;
-      if (!c) return;
-      const raisedBefore = c.raisedAmount;
+      const raisedBefore = c?.raisedAmount ?? 0;
       const countBefore = donorsRef.current.length;
       const add = info?.amountAddedPhp;
-      if (add != null && Number.isFinite(add) && add > 0) {
-        setCampaign((cur) => (cur ? { ...cur, raisedAmount: cur.raisedAmount + add } : null));
+      if (c && add != null && Number.isFinite(add) && add > 0) {
+        const floor = raisedBefore + add;
+        optimisticRaisedFloorRef.current = floor;
+        setCampaign((cur) => (cur ? { ...cur, raisedAmount: floor } : null));
       }
-      void pollUntilDonationRecorded(raisedBefore, countBefore);
+      if (c) {
+        void pollUntilDonationRecorded(raisedBefore, countBefore);
+      } else {
+        void silentRefreshCampaign();
+      }
       setDonateBanner('Thanks! Your gift was successful.');
     },
-    [pollUntilDonationRecorded],
+    [pollUntilDonationRecorded, silentRefreshCampaign],
   );
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const loadRef = useRef(load);
+  loadRef.current = load;
+
+  const routerRef = useRef(router);
+  routerRef.current = router;
 
   useEffect(() => {
-    const d = searchParams.get('donated');
+    void loadRef.current();
+  }, [slug, api, token]);
+
+  useEffect(() => {
+    donateHandled.current = null;
+    prevDonatedQuery.current = null;
+    optimisticRaisedFloorRef.current = null;
+  }, [slug]);
+
+  const silentRefreshRef = useRef(silentRefreshCampaign);
+  silentRefreshRef.current = silentRefreshCampaign;
+  const prevDonatedQuery = useRef<string | null>(null);
+  const checkoutReturnInFlight = useRef(false);
+  const pollRef = useRef(pollUntilDonationRecorded);
+  pollRef.current = pollUntilDonationRecorded;
+
+  useEffect(() => {
+    const d = initialDonated;
     if (d !== 'stripe' && d !== 'cancel') {
-      donateHandled.current = null;
+      const prev = prevDonatedQuery.current;
+      prevDonatedQuery.current = d ?? null;
+      if (prev === 'stripe' || prev === 'cancel') {
+        donateHandled.current = null;
+      }
       return;
     }
-    const key = `${slug}:${d}:${searchParams.get('session_id') ?? ''}`;
+    prevDonatedQuery.current = d;
+    /** One run per Stripe return (include session/PI so a second gift in the same tab still syncs). */
+    const key = `${slug}:${d}:${initialCheckoutSessionId ?? ''}:${initialPaymentIntentId ?? ''}`;
     if (donateHandled.current === key) return;
+    if (checkoutReturnInFlight.current) return;
     donateHandled.current = key;
+    checkoutReturnInFlight.current = true;
+
+    const raisedBefore = campaignRef.current?.raisedAmount ?? 0;
+    const donorCountBefore = donorsRef.current.length;
+
     void (async () => {
-      const snapshot = await silentRefreshCampaign();
-      if (d === 'stripe' && snapshot.ok) {
-        await pollUntilDonationRecorded(snapshot.raised, snapshot.donorCount);
+      try {
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        if (d === 'stripe' && api) {
+          if (initialCheckoutSessionId) {
+            const res = await fetch(
+              `${api}/campaigns/${encodeURIComponent(slug)}/donations/sync-checkout`,
+              { method: 'POST', headers, body: JSON.stringify({ sessionId: initialCheckoutSessionId }) },
+            );
+            if (!res.ok) {
+              const err = await res.text();
+              console.warn('sync-checkout failed', res.status, err);
+            }
+          } else if (initialPaymentIntentId) {
+            const res = await fetch(
+              `${api}/campaigns/${encodeURIComponent(slug)}/donations/sync-payment-intent`,
+              { method: 'POST', headers, body: JSON.stringify({ paymentIntentId: initialPaymentIntentId }) },
+            );
+            if (!res.ok) {
+              const err = await res.text();
+              console.warn('sync-payment-intent failed', res.status, err);
+            }
+          }
+        }
+
+        await silentRefreshRef.current();
+
+        if (d === 'stripe') {
+          void pollRef.current(raisedBefore, donorCountBefore);
+          setDonateBanner(
+            'Thanks! Your gift is being confirmed — totals update as soon as Stripe and our server agree.',
+          );
+        } else {
+          setDonateBanner('Checkout was cancelled.');
+        }
+        routerRef.current.replace(`/campaigns/${encodeURIComponent(slug)}`, { scroll: false });
+      } finally {
+        checkoutReturnInFlight.current = false;
       }
-      if (d === 'stripe') {
-        setDonateBanner('Thanks! If your gift does not show yet, wait a few seconds and refresh — we confirm it with Stripe.');
-      } else {
-        setDonateBanner('Checkout was cancelled.');
-      }
-      router.replace(`/campaigns/${encodeURIComponent(slug)}`, { scroll: false });
     })();
-  }, [searchParams, slug, router, pollUntilDonationRecorded, silentRefreshCampaign]);
+  }, [initialDonated, initialCheckoutSessionId, initialPaymentIntentId, slug, api, token]);
 
   if (loading) {
     return (

@@ -19,6 +19,7 @@ import { mapCampaign, mapComment, mapDonation } from './campaigns.mapper';
 import type { ApiCampaign, ApiComment, ApiDonor } from './campaigns.mapper';
 import { normalizeCampaignImages } from './campaign-images.util';
 import { StripeService } from '../payments/stripe.service';
+import { StripeWebhookService } from '../payments/stripe-webhook.service';
 
 function slugify(title: string): string {
   const base = title
@@ -49,6 +50,7 @@ export class CampaignsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
+    private readonly stripeWebhooks: StripeWebhookService,
   ) {}
 
   async listPublic(): Promise<ApiCampaign[]> {
@@ -265,6 +267,38 @@ export class CampaignsService {
       donorDisplayName: dto.donorDisplayName.trim(),
       amountPhp: dto.amount,
     });
+  }
+
+  /** Record a paid Checkout session in the DB when Stripe webhooks did not run (e.g. local dev). Idempotent. */
+  async syncDonationStripeCheckout(slug: string, sessionId: string): Promise<{ ok: true }> {
+    let session: Awaited<ReturnType<StripeService['retrieveCheckoutSession']>>;
+    try {
+      session = await this.stripe.retrieveCheckoutSession(sessionId);
+    } catch {
+      throw new BadRequestException('Could not retrieve Stripe checkout session.');
+    }
+    const metaSlug = session.metadata?.campaign_slug?.trim();
+    if (!metaSlug || metaSlug !== slug) {
+      throw new BadRequestException('This checkout session does not belong to this campaign.');
+    }
+    await this.stripeWebhooks.recordCheckoutFromRetrievedSession(session);
+    return { ok: true };
+  }
+
+  /** Record a succeeded PaymentIntent when webhooks did not run (e.g. 3DS return). Idempotent. */
+  async syncDonationStripePaymentIntent(slug: string, paymentIntentId: string): Promise<{ ok: true }> {
+    let pi: Awaited<ReturnType<StripeService['retrievePaymentIntent']>>;
+    try {
+      pi = await this.stripe.retrievePaymentIntent(paymentIntentId);
+    } catch {
+      throw new BadRequestException('Could not retrieve Stripe payment.');
+    }
+    const metaSlug = pi.metadata?.campaign_slug?.trim();
+    if (!metaSlug || metaSlug !== slug) {
+      throw new BadRequestException('This payment does not belong to this campaign.');
+    }
+    await this.stripeWebhooks.recordPaymentIntentFromRetrieved(pi);
+    return { ok: true };
   }
 
   async addDonation(

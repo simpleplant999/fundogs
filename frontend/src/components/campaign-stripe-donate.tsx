@@ -37,10 +37,18 @@ function EmbeddedPayForm({
   const submit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!stripe || !elements) return;
+      if (!stripe || !elements) {
+        setLocalErr('Payment form is still loading. Please wait a moment and try again.');
+        return;
+      }
       setLocalErr(null);
       setBusy(true);
       try {
+        const { error: submitError } = await elements.submit();
+        if (submitError) {
+          setLocalErr(submitError.message ?? 'Check your payment details.');
+          return;
+        }
         const { error, paymentIntent } = await stripe.confirmPayment({
           elements,
           confirmParams: {
@@ -54,6 +62,10 @@ function EmbeddedPayForm({
         }
         if (paymentIntent?.status === 'succeeded') {
           onPaid();
+        } else if (paymentIntent && !error) {
+          setLocalErr(
+            `Payment status: ${paymentIntent.status}. If you were charged, refresh the page in a moment.`,
+          );
         }
       } finally {
         setBusy(false);
@@ -194,13 +206,13 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
   }
 
   const handlePaid = useCallback(() => {
-    setClientSecret(null);
     const amt = Number(amount);
     if (Number.isFinite(amt) && amt >= 1) {
       onSuccess({ amountAddedPhp: amt });
     } else {
       onSuccess();
     }
+    setClientSecret(null);
   }, [onSuccess, amount]);
 
   return (

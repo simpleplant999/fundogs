@@ -19,6 +19,8 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateDonationCheckoutDto } from './dto/create-donation-checkout.dto';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { SyncStripeCheckoutDto } from './dto/sync-stripe-checkout.dto';
+import { SyncStripePaymentIntentDto } from './dto/sync-stripe-payment-intent.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -123,6 +125,16 @@ export class CampaignsController {
   @Post(':slug/donations/checkout')
   postDonationCheckout(@Param('slug') slug: string, @Body() dto: CreateDonationCheckoutDto) {
     return this.campaigns.createDonationCheckoutSession(slug, dto);
+  }
+
+  @Post(':slug/donations/sync-checkout')
+  syncStripeCheckout(@Param('slug') slug: string, @Body() dto: SyncStripeCheckoutDto) {
+    return this.campaigns.syncDonationStripeCheckout(slug, dto.sessionId);
+  }
+
+  @Post(':slug/donations/sync-payment-intent')
+  syncStripePaymentIntent(@Param('slug') slug: string, @Body() dto: SyncStripePaymentIntentDto) {
+    return this.campaigns.syncDonationStripePaymentIntent(slug, dto.paymentIntentId);
   }
 
   @Post(':slug/donations')

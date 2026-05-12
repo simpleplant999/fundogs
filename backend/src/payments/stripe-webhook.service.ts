@@ -14,8 +14,15 @@ export class StripeWebhookService {
   constructor(private readonly prisma: PrismaService) {}
 
   async dispatchVerifiedEvent(event: Stripe.Event): Promise<void> {
+    this.log.log(`Stripe webhook received: ${event.type}`);
     switch (event.type) {
       case 'checkout.session.completed':
+        await this.onCheckoutSessionCompleted(
+          event.data.object as Stripe.Checkout.Session,
+          event.created,
+        );
+        break;
+      case 'checkout.session.async_payment_succeeded':
         await this.onCheckoutSessionCompleted(
           event.data.object as Stripe.Checkout.Session,
           event.created,
@@ -50,6 +57,11 @@ export class StripeWebhookService {
       where: { stripePaymentIntentId: pi.id },
     });
     if (existing) return;
+
+    const existingByFundraisingRef = await this.prisma.donation.findFirst({
+      where: { fundraisingReference: pi.id },
+    });
+    if (existingByFundraisingRef) return;
 
     const campaign = await this.prisma.campaign.findUnique({ where: { slug } });
     if (!campaign) {
@@ -86,6 +98,7 @@ export class StripeWebhookService {
         data: { raisedAmount: { increment: amountPhp } },
       });
     });
+    this.log.log(`Recorded PaymentIntent donation ${pi.id} campaign ${slug}`);
   }
 
   private async onCheckoutSessionCompleted(
@@ -109,10 +122,31 @@ export class StripeWebhookService {
     }
     const amountPhp = amountTotal / 100;
 
+    const piId =
+      typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : session.payment_intent?.id ?? '';
+
     const existing = await this.prisma.donation.findUnique({
       where: { stripeCheckoutSessionId: session.id },
     });
     if (existing) return;
+
+    if (piId) {
+      const wonByPi = await this.prisma.donation.findUnique({
+        where: { stripePaymentIntentId: piId },
+      });
+      if (wonByPi) {
+        if (!wonByPi.stripeCheckoutSessionId) {
+          await this.prisma.donation.update({
+            where: { id: wonByPi.id },
+            data: { stripeCheckoutSessionId: session.id },
+          });
+          this.log.log(`Linked checkout session ${session.id} to existing donation ${wonByPi.id} (PI ${piId})`);
+        }
+        return;
+      }
+    }
 
     const campaign = await this.prisma.campaign.findUnique({ where: { slug } });
     if (!campaign) {
@@ -128,11 +162,6 @@ export class StripeWebhookService {
       return;
     }
 
-    const pi =
-      typeof session.payment_intent === 'string'
-        ? session.payment_intent
-        : session.payment_intent?.id ?? '';
-
     await this.prisma.$transaction(async (tx) => {
       const dup = await tx.donation.findUnique({ where: { stripeCheckoutSessionId: session.id } });
       if (dup) return;
@@ -142,9 +171,10 @@ export class StripeWebhookService {
           donorDisplayName: donorName,
           amount: amountPhp,
           stripeCheckoutSessionId: session.id,
+          ...(piId ? { stripePaymentIntentId: piId } : {}),
           trackingNumber: 'stripe',
           branch: 'stripe',
-          fundraisingReference: pi,
+          fundraisingReference: piId || session.id,
           verificationStatus: DonationVerificationStatus.VERIFIED,
           createdAt: new Date(eventCreatedSec * 1000),
         },
@@ -154,5 +184,18 @@ export class StripeWebhookService {
         data: { raisedAmount: { increment: amountPhp } },
       });
     });
+    this.log.log(`Recorded checkout donation for session ${session.id} campaign ${slug}`);
+  }
+
+  /** When webhooks cannot reach your server (common in local dev), call after retrieving the session from Stripe. */
+  async recordCheckoutFromRetrievedSession(session: Stripe.Checkout.Session): Promise<void> {
+    const createdSec = typeof session.created === 'number' ? session.created : Math.floor(Date.now() / 1000);
+    await this.onCheckoutSessionCompleted(session, createdSec);
+  }
+
+  /** Same for Payment Element / 3DS return when webhooks are missing. */
+  async recordPaymentIntentFromRetrieved(pi: Stripe.PaymentIntent): Promise<void> {
+    const createdSec = typeof pi.created === 'number' ? pi.created : Math.floor(Date.now() / 1000);
+    await this.onPaymentIntentSucceeded(pi, createdSec);
   }
 }
