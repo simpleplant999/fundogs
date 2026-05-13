@@ -18,6 +18,18 @@ export type AuthUser = {
   email: string;
   fullName: string;
   role: 'USER' | 'ADMIN';
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    memberRole: 'ADMIN' | 'MEMBER';
+  } | null;
+};
+
+export type UpdateMeInput = {
+  fullName?: string;
+  currentPassword?: string;
+  newPassword?: string;
 };
 
 type AuthContextValue = {
@@ -25,9 +37,15 @@ type AuthContextValue = {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
-  register: (fullName: string, email: string, password: string) => Promise<AuthUser>;
+  register: (
+    fullName: string,
+    email: string,
+    password: string,
+    inviteCode?: string,
+  ) => Promise<AuthUser>;
   logout: () => void;
   refreshMe: () => Promise<void>;
+  updateMe: (patch: UpdateMeInput) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -68,8 +86,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const me = (await res.json()) as AuthUser;
-    setUser(me);
+    setUser({
+      ...me,
+      organization: me.organization
+        ? {
+            ...me.organization,
+            memberRole: me.organization.memberRole ?? 'MEMBER',
+          }
+        : null,
+    });
     setToken(t);
+  }, []);
+
+  const updateMe = useCallback(async (patch: UpdateMeInput) => {
+    const base = getClientApiBase();
+    const t =
+      typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    if (!base || !t) throw new Error('Not signed in');
+    const body: Record<string, string> = {};
+    if (patch.fullName !== undefined) body.fullName = patch.fullName.trim();
+    if (patch.newPassword !== undefined) body.newPassword = patch.newPassword;
+    if (patch.currentPassword !== undefined) body.currentPassword = patch.currentPassword;
+    if (Object.keys(body).length === 0) throw new Error('Nothing to update.');
+    const res = await fetch(`${base}/auth/me`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${t}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(parseApiError(data));
+    const me = data as AuthUser;
+    setUser({
+      ...me,
+      organization: me.organization
+        ? {
+            ...me.organization,
+            memberRole: me.organization.memberRole ?? 'MEMBER',
+          }
+        : null,
+    });
   }, []);
 
   useEffect(() => {
@@ -89,26 +147,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = data.user as AuthUser;
     localStorage.setItem(STORAGE_KEY, data.accessToken);
     setToken(data.accessToken);
-    setUser(u);
-    return u;
+    const normalized: AuthUser = {
+      ...u,
+      organization: u.organization
+        ? { ...u.organization, memberRole: u.organization.memberRole ?? 'MEMBER' }
+        : null,
+    };
+    setUser(normalized);
+    return normalized;
   }, []);
 
   const register = useCallback(
-    async (fullName: string, email: string, password: string) => {
+    async (fullName: string, email: string, password: string, inviteCode?: string) => {
       const base = getClientApiBase();
       if (!base) throw new Error('NEXT_PUBLIC_API_URL is not set');
+      const body: Record<string, string> = { fullName, email, password };
+      if (inviteCode?.trim()) body.inviteCode = inviteCode.trim();
       const res = await fetch(`${base}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(parseApiError(data));
       const u = data.user as AuthUser;
       localStorage.setItem(STORAGE_KEY, data.accessToken);
       setToken(data.accessToken);
-      setUser(u);
-      return u;
+      const normalized: AuthUser = {
+        ...u,
+        organization: u.organization
+          ? { ...u.organization, memberRole: u.organization.memberRole ?? 'MEMBER' }
+          : null,
+      };
+      setUser(normalized);
+      return normalized;
     },
     [],
   );
@@ -128,8 +200,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       refreshMe,
+      updateMe,
     }),
-    [user, token, loading, login, register, logout, refreshMe],
+    [user, token, loading, login, register, logout, refreshMe, updateMe],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

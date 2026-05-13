@@ -12,6 +12,27 @@ export function getApiBase(): string {
   return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? "");
 }
 
+export type PublicOrganizationListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  bio: string;
+  profilePhotoUrl: string;
+  memberCount: number;
+};
+
+export async function fetchOrganizations(): Promise<PublicOrganizationListItem[] | null> {
+  const base = getApiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/organizations`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchPublishedCampaigns(): Promise<Campaign[] | null> {
   const base = getApiBase();
   if (!base) return null;

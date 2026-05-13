@@ -13,12 +13,9 @@ import {
   formatGoalAmountFromNumber,
   parseGoalAmountInput,
 } from '@/lib/goal-amount-input';
+import { formatPhp } from '@/lib/format-currency';
 import type { Campaign } from '@/lib/types';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
-
-function money(n: number) {
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
-}
 
 function approvalLabel(s?: string) {
   if (!s) return '—';
@@ -215,7 +212,7 @@ export function MyCampaignsTable() {
                     {approvalLabel(r.approvalStatus)}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-3 text-amber-950/80">{money(r.goalAmount)}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-amber-950/80">{formatPhp(r.goalAmount)}</td>
                 <td className="px-3 py-3">
                   <div className="flex flex-wrap justify-end gap-1.5">
                     <button
@@ -285,11 +282,11 @@ export function MyCampaignsTable() {
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Raised</p>
-                  <p className="text-2xl font-bold text-teal-800">{money(preview.raisedAmount)}</p>
+                  <p className="text-2xl font-bold text-teal-800">{formatPhp(preview.raisedAmount)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Goal</p>
-                  <p className="text-xl font-semibold text-amber-950">{money(preview.goalAmount)}</p>
+                  <p className="text-xl font-semibold text-amber-950">{formatPhp(preview.goalAmount)}</p>
                 </div>
               </div>
               <div className="mt-4">

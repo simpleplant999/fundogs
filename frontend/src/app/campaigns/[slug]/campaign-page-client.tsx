@@ -9,16 +9,9 @@ import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
 import { DonorsList } from '@/components/donors-list';
 import { ProgressBar } from '@/components/progress-bar';
 import { getCampaignImages } from '@/lib/campaign-images';
+import { formatPhp } from '@/lib/format-currency';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 import type { Campaign, Donor } from '@/lib/types';
-
-function formatPhp(n: number) {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    maximumFractionDigits: 0,
-  }).format(n);
-}
 
 function canShowDonateWidget(c: Campaign): boolean {
   return (

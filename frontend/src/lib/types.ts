@@ -18,6 +18,11 @@ export interface Campaign {
   approvalStatus: CampaignApprovalStatus;
   recipientName: string;
   recipientNote: string;
+  /** Present when API includes author (e.g. public list). */
+  author?: {
+    fullName: string;
+    organization: { name: string; slug: string } | null;
+  };
   /** Present on /campaigns/me responses */
   createdAt?: string;
 }

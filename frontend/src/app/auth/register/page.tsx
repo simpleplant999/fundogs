@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,7 +20,7 @@ export default function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const u = await register(fullName, email, password);
+      const u = await register(fullName, email, password, inviteCode.trim() || undefined);
       router.push(u.role === 'ADMIN' ? '/admin' : '/profile');
       router.refresh();
     } catch (err) {
@@ -33,7 +34,8 @@ export default function RegisterPage() {
     <div className="mx-auto flex max-w-md flex-col px-4 py-14 sm:px-6">
       <h1 className="text-3xl font-bold text-amber-950">Create an account</h1>
       <p className="mt-2 text-sm text-amber-950/75">
-        Regular accounts can post campaigns (pending review before they go live).
+        Regular accounts can post campaigns (pending review before they go live). If your rescue or group shared an
+        invite code, enter it below to join that organization automatically.
       </p>
       <form onSubmit={onSubmit} className="mt-8 space-y-4 rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm">
         <label className="block text-sm font-medium text-amber-950">
@@ -67,6 +69,17 @@ export default function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
             className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
+          />
+        </label>
+        <label className="block text-sm font-medium text-amber-950">
+          Organization invite code <span className="font-normal text-amber-950/55">(optional)</span>
+          <input
+            type="text"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+            autoComplete="off"
+            placeholder="e.g. A1B2C3D4E5F6"
+            className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2"
           />
         </label>
         <label className="flex items-start gap-2 text-sm text-amber-950/85">

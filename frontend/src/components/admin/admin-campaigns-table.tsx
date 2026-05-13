@@ -13,6 +13,7 @@ import {
   formatGoalAmountFromNumber,
   parseGoalAmountInput,
 } from '@/lib/goal-amount-input';
+import { formatPhp } from '@/lib/format-currency';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
 export type AdminCampaignTableRow = {
@@ -28,17 +29,13 @@ export type AdminCampaignTableRow = {
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   recipientName: string;
   recipientNote: string;
-  author?: { id: string; email: string; fullName: string };
+  author?: { id: string; email: string; fullName: string; organization?: { name: string; slug: string } | null };
   createdAt?: string;
 };
 
 type Props = {
   showHeading?: boolean;
 };
-
-function money(n: number) {
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
-}
 
 function approvalLabel(s?: string) {
   if (!s) return '—';
@@ -85,10 +82,6 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
     if (!res.ok) return;
     setRows(await res.json());
   }, [api, token, router]);
-
-  useEffect(() => {
-    if (!loading && (!user || user.role !== 'ADMIN')) router.replace('/');
-  }, [loading, user, router]);
 
   useEffect(() => {
     if (user?.role === 'ADMIN' && token) void load();
@@ -296,7 +289,7 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
                         {approvalLabel(r.approvalStatus)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-amber-950/80">{money(r.goalAmount)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-amber-950/80">{formatPhp(r.goalAmount)}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-amber-950/70">{created}</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap justify-end gap-1.5">
@@ -400,11 +393,11 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Raised</p>
-                  <p className="text-2xl font-bold text-teal-800">{money(preview.raisedAmount)}</p>
+                  <p className="text-2xl font-bold text-teal-800">{formatPhp(preview.raisedAmount)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Goal</p>
-                  <p className="text-xl font-semibold text-amber-950">{money(preview.goalAmount)}</p>
+                  <p className="text-xl font-semibold text-amber-950">{formatPhp(preview.goalAmount)}</p>
                 </div>
               </div>
               <div className="mt-4">

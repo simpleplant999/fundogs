@@ -21,6 +21,11 @@ export type ApiCampaign = {
   approvalStatus: 'pending' | 'approved' | 'rejected';
   recipientName: string;
   recipientNote: string;
+  /** Present when API includes author relation */
+  author?: {
+    fullName: string;
+    organization: { name: string; slug: string } | null;
+  };
 };
 
 export type ApiComment = {
@@ -54,8 +59,24 @@ function galleryUrls(c: Campaign): string[] {
   return [c.imageUrl];
 }
 
-export function mapCampaign(c: Campaign): ApiCampaign {
+type CampaignWithAuthorOpt = Campaign & {
+  author?: {
+    fullName: string;
+    organization: { name: string; slug: string } | null;
+  } | null;
+};
+
+export function mapCampaign(c: CampaignWithAuthorOpt): ApiCampaign {
   const images = galleryUrls(c);
+  const author =
+    c.author && typeof c.author === 'object'
+      ? {
+          fullName: c.author.fullName,
+          organization: c.author.organization
+            ? { name: c.author.organization.name, slug: c.author.organization.slug }
+            : null,
+        }
+      : undefined;
   return {
     id: c.id,
     slug: c.slug,
@@ -69,6 +90,7 @@ export function mapCampaign(c: Campaign): ApiCampaign {
     approvalStatus: c.approvalStatus.toLowerCase() as ApiCampaign['approvalStatus'],
     recipientName: c.recipientName,
     recipientNote: c.recipientNote,
+    ...(author ? { author } : {}),
   };
 }
 

@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -12,6 +13,9 @@ import { UserRole } from '@prisma/client';
 import { AdminService } from './admin.service';
 import { AdminUpdateCampaignDto } from './dto/admin-update-campaign.dto';
 import { ModerateCommentDto } from './dto/moderate-comment.dto';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
@@ -20,6 +24,56 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @Roles(UserRole.ADMIN)
 export class AdminController {
   constructor(private readonly admin: AdminService) {}
+
+  @Get('summary')
+  summary() {
+    return this.admin.getSummary();
+  }
+
+  @Get('users')
+  listUsers() {
+    return this.admin.listUsers();
+  }
+
+  @Patch('users/:id')
+  updateUser(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
+    return this.admin.updateUser(id, dto);
+  }
+
+  @Get('organizations')
+  listOrganizations() {
+    return this.admin.listOrganizations();
+  }
+
+  @Get('organizations/:id')
+  getOrganization(@Param('id') id: string) {
+    return this.admin.getOrganizationAdmin(id);
+  }
+
+  @Post('organizations')
+  createOrganization(@Body() dto: CreateOrganizationDto) {
+    return this.admin.createOrganization(dto);
+  }
+
+  @Patch('organizations/:id')
+  updateOrganization(@Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
+    return this.admin.updateOrganization(id, dto);
+  }
+
+  @Delete('organizations/:id')
+  deleteOrganization(@Param('id') id: string) {
+    return this.admin.deleteOrganization(id);
+  }
+
+  @Post('organizations/:id/regenerate-invite')
+  regenerateInvite(@Param('id') id: string) {
+    return this.admin.regenerateOrganizationInvite(id);
+  }
+
+  @Delete('organizations/:id/members/:userId')
+  removeOrganizationMember(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.admin.removeOrganizationMember(id, userId);
+  }
 
   @Get('campaigns')
   allCampaigns() {

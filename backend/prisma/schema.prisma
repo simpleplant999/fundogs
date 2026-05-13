@@ -13,6 +13,12 @@ enum UserRole {
   ADMIN
 }
 
+/** Role within an organization (only when organizationId is set). */
+enum OrganizationMemberRole {
+  MEMBER
+  ADMIN
+}
+
 enum CampaignApprovalStatus {
   PENDING
   APPROVED
@@ -44,11 +50,29 @@ model User {
   passwordHash String
   fullName     String
   role         UserRole @default(USER)
+  organizationId String?
+  organizationMemberRole OrganizationMemberRole?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   campaigns Campaign[]
   comments  Comment[]
+}
+
+model Organization {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  name            String
+  bio             String   @default("")
+  profilePhotoUrl String   @default("")
+  coverPhotoUrl   String   @default("")
+  photoUrls       String[] @default([])
+  inviteCode      String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members User[]
 }
 
 model Campaign {

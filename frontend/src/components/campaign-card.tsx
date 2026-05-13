@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Campaign } from "@/lib/types";
 import { getCampaignImages } from "@/lib/campaign-images";
+import { OrganizationVerifiedBadge } from "@/components/organization-verified-badge";
+import { formatPhp } from "@/lib/format-currency";
 import { ProgressBar } from "./progress-bar";
 
 function StatusChip({ status }: { status: Campaign["status"] }) {
@@ -17,14 +19,6 @@ function StatusChip({ status }: { status: Campaign["status"] }) {
       {status}
     </span>
   );
-}
-
-function formatPhp(n: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 export function CampaignCard({ campaign }: { campaign: Campaign }) {
@@ -48,6 +42,26 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
           </h2>
         </Link>
         <p className="line-clamp-2 text-sm text-amber-950/75">{campaign.description}</p>
+        {campaign.author ? (
+          <div className="text-xs leading-relaxed text-amber-950/70">
+            <p>
+              <span className="text-amber-950/85">{campaign.author.fullName}</span>
+            </p>
+            {campaign.author.organization ? (
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/organizations/${campaign.author.organization.slug}`}
+                    className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
+                  >
+                    {campaign.author.organization.name}
+                  </Link>
+                  <OrganizationVerifiedBadge compact />
+                </span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
         <div className="mt-auto flex items-end justify-between gap-2 text-sm">
           <div>

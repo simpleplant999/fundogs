@@ -6,6 +6,8 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { AdminModule } from './admin/admin.module';
 import { PaymentsModule } from './payments/payments.module';
 
+import { OrganizationsModule } from './organizations/organizations.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -14,6 +16,7 @@ import { PaymentsModule } from './payments/payments.module';
     PaymentsModule,
     CampaignsModule,
     AdminModule,
+    OrganizationsModule,
   ],
 })
 export class AppModule {}

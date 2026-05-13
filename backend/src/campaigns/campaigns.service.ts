@@ -69,6 +69,14 @@ export class CampaignsService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
     });
     return rows.map((c) => mapCampaign(c));
   }
@@ -77,6 +85,14 @@ export class CampaignsService {
     const rows = await this.prisma.campaign.findMany({
       where: { authorId: userId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
     });
     return rows.map((c) => ({
       ...mapCampaign(c),
@@ -130,11 +146,33 @@ export class CampaignsService {
       where: { id: campaignId },
       data,
     });
-    return mapCampaign(updated);
+    const full = await this.prisma.campaign.findUnique({
+      where: { id: updated.id },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    });
+    if (!full) throw new NotFoundException('Campaign not found');
+    return mapCampaign(full);
   }
 
   async getBySlug(slug: string, viewer?: JwtUserPayload): Promise<ApiCampaign> {
-    const c = await this.prisma.campaign.findUnique({ where: { slug } });
+    const c = await this.prisma.campaign.findUnique({
+      where: { slug },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    });
     if (!c) throw new NotFoundException(`Campaign not found: ${slug}`);
     if (!canViewCampaign(c, viewer)) throw new NotFoundException(`Campaign not found: ${slug}`);
     return mapCampaign(c);
@@ -179,7 +217,19 @@ export class CampaignsService {
         authorId: userId,
       },
     });
-    return mapCampaign(c);
+    const full = await this.prisma.campaign.findUnique({
+      where: { id: c.id },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    });
+    if (!full) throw new NotFoundException('Campaign not found');
+    return mapCampaign(full);
   }
 
   private async getCampaignRowBySlug(slug: string): Promise<Campaign> {

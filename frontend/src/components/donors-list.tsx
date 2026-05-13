@@ -1,4 +1,5 @@
 import type { Donor } from "@/lib/types";
+import { formatPhp } from "@/lib/format-currency";
 
 const MONTH_SHORT = [
   "Jan",
@@ -36,14 +37,6 @@ function formatDonorDate(iso: string): string {
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
   return `${mmm} ${dd}, ${yyyy} ${hh}:${mm}`;
-}
-
-function formatPhp(n: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 0,
-  }).format(n);
 }
 
 export function DonorsList({ donors }: { donors: Donor[] }) {
