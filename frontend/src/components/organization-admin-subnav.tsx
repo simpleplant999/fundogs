@@ -15,7 +15,7 @@ export function OrganizationAdminSubnav({
   orgSlug?: string;
 }) {
   const base =
-    'rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition-colors';
+    'rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition-colors mt-2';
   const active = 'bg-amber-950 text-amber-50 ring-amber-950';
   const idle = 'text-amber-950 ring-amber-900/15 hover:bg-amber-50';
 

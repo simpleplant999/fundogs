@@ -210,6 +210,24 @@ export class OrganizationsService {
     return this.getMineForEdit(userId);
   }
 
+  async setOrgProfilePhotoUrl(userId: string, url: string) {
+    const { organizationId } = await this.requireOrgAdmin(userId);
+    await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { profilePhotoUrl: url.trim() },
+    });
+    return this.getMineForEdit(userId);
+  }
+
+  async setOrgCoverPhotoUrl(userId: string, url: string) {
+    const { organizationId } = await this.requireOrgAdmin(userId);
+    await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: { coverPhotoUrl: url.trim() },
+    });
+    return this.getMineForEdit(userId);
+  }
+
   async listMembersForOrgAdmin(actorUserId: string) {
     const { organizationId } = await this.requireOrgMember(actorUserId);
     const members = await this.prisma.user.findMany({

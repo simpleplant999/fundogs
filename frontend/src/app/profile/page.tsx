@@ -157,7 +157,7 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold text-amber-950">Your profile</h1>
       <div className="mt-8 space-y-8 rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm">
-        <form onSubmit={(e) => void onSaveProfile(e)} className="space-y-8">
+        <form id="profile-settings-form" onSubmit={(e) => void onSaveProfile(e)} className="space-y-8">
           <div>
             <h2 className="text-sm font-semibold text-amber-950">Profile photo</h2>
             <p className="mt-1 text-xs text-amber-950/65">
@@ -275,19 +275,6 @@ export default function ProfilePage() {
             />
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-amber-900/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="submit"
-              disabled={savingProfile}
-              className="rounded-full bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
-            >
-              {savingProfile ? 'Saving…' : 'Save changes'}
-            </button>
-            {profileErr ? <p className="text-sm text-red-700 sm:text-right">{profileErr}</p> : null}
-            {profileOk && !profileErr ? (
-              <p className="text-sm text-teal-800 sm:ml-auto sm:text-right">{profileOk}</p>
-            ) : null}
-          </div>
         </form>
 
         <p>
@@ -331,6 +318,21 @@ export default function ProfilePage() {
             </Link>
           </div>
         ) : null}
+
+        <div className="flex flex-col gap-3 border-t border-amber-900/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="submit"
+            form="profile-settings-form"
+            disabled={savingProfile}
+            className="rounded-full bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
+          >
+            {savingProfile ? 'Saving…' : 'Save changes'}
+          </button>
+          {profileErr ? <p className="text-sm text-red-700 sm:text-right">{profileErr}</p> : null}
+          {profileOk && !profileErr ? (
+            <p className="text-sm text-teal-800 sm:ml-auto sm:text-right">{profileOk}</p>
+          ) : null}
+        </div>
       </div>
 
       {passwordModalOpen ? (
