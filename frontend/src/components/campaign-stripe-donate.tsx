@@ -216,7 +216,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
   }, [onSuccess, amount]);
 
   return (
-    <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm hidden">
       <h2 className="text-lg font-bold text-amber-950">Donate with card</h2>
       <p className="mt-1 text-xs text-amber-950/65">
         Pay on this page with Stripe (fast), or open Stripe&apos;s full checkout page if you prefer. Verified gifts

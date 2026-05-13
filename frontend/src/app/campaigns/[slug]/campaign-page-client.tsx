@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
 import { CampaignShareMenu } from '@/components/campaign-share-menu';
-import { CampaignStripeDonate } from '@/components/campaign-stripe-donate';
+import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
 import { DonorsList } from '@/components/donors-list';
 import { ProgressBar } from '@/components/progress-bar';
 import { getCampaignImages } from '@/lib/campaign-images';
@@ -20,7 +20,7 @@ function formatPhp(n: number) {
   }).format(n);
 }
 
-function canStripeDonate(c: Campaign): boolean {
+function canShowDonateWidget(c: Campaign): boolean {
   return (
     c.approvalStatus === 'approved' && (c.status === 'Published' || c.status === 'Done')
   );
@@ -39,6 +39,7 @@ function StatusLine({ status }: { status: Campaign['status'] }) {
 export type CampaignPageClientProps = {
   slug: string;
   /** From the server page — avoids `useSearchParams()` (which can retrigger effects every render). */
+  /** Stripe checkout return or cancel. */
   initialDonated?: 'stripe' | 'cancel' | null;
   initialCheckoutSessionId?: string | null;
   initialPaymentIntentId?: string | null;
@@ -207,7 +208,7 @@ export function CampaignPageClient({
       return;
     }
     prevDonatedQuery.current = d;
-    /** One run per Stripe return (include session/PI so a second gift in the same tab still syncs). */
+    /** One run per return (Stripe session/PI or PayMongo PI). */
     const key = `${slug}:${d}:${initialCheckoutSessionId ?? ''}:${initialPaymentIntentId ?? ''}`;
     if (donateHandled.current === key) return;
     if (checkoutReturnInFlight.current) return;
@@ -343,13 +344,13 @@ export function CampaignPageClient({
         </div>
 
         <aside className="space-y-8 lg:pt-2">
-          {api && campaign && canStripeDonate(campaign) ? (
-            <CampaignStripeDonate slug={slug} api={api} onSuccess={onDonateSuccess} />
+          {api && campaign && canShowDonateWidget(campaign) ? (
+            <CampaignPaymongoDonate slug={slug} api={api} onPaid={onDonateSuccess} />
           ) : null}
           <section>
             <h2 className="text-xl font-bold text-amber-950">Recent donors</h2>
             <p className="mt-1 text-sm text-amber-950/70">
-              Verified card gifts are shown to everyone; other pledges may stay pending until confirmed.
+              Verified PayMongo and other confirmed gifts appear here; pending pledges may take longer to show.
             </p>
             <div className="mt-4">
               <DonorsList donors={donors} />

@@ -19,8 +19,10 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateDonationCheckoutDto } from './dto/create-donation-checkout.dto';
 import { CreateDonationDto } from './dto/create-donation.dto';
+import { CreatePaymongoQrDto } from './dto/create-paymongo-qr.dto';
 import { SyncStripeCheckoutDto } from './dto/sync-stripe-checkout.dto';
 import { SyncStripePaymentIntentDto } from './dto/sync-stripe-payment-intent.dto';
+import { SyncPaymongoIntentDto } from './dto/sync-paymongo-intent.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -135,6 +137,21 @@ export class CampaignsController {
   @Post(':slug/donations/sync-payment-intent')
   syncStripePaymentIntent(@Param('slug') slug: string, @Body() dto: SyncStripePaymentIntentDto) {
     return this.campaigns.syncDonationStripePaymentIntent(slug, dto.paymentIntentId);
+  }
+
+  @Post(':slug/donations/paymongo-qr')
+  postPaymongoQr(@Param('slug') slug: string, @Body() dto: CreatePaymongoQrDto) {
+    return this.campaigns.createPaymongoQrDonation(slug, dto);
+  }
+
+  @Post(':slug/donations/paymongo-card')
+  postPaymongoCard(@Param('slug') slug: string, @Body() dto: CreatePaymongoQrDto) {
+    return this.campaigns.createPaymongoCardDonation(slug, dto);
+  }
+
+  @Post(':slug/donations/sync-paymongo')
+  syncPaymongo(@Param('slug') slug: string, @Body() dto: SyncPaymongoIntentDto) {
+    return this.campaigns.syncPaymongoDonation(slug, dto.paymentIntentId);
   }
 
   @Post(':slug/donations')

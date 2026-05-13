@@ -20,6 +20,8 @@ import type { ApiCampaign, ApiComment, ApiDonor } from './campaigns.mapper';
 import { normalizeCampaignImages } from './campaign-images.util';
 import { StripeService } from '../payments/stripe.service';
 import { StripeWebhookService } from '../payments/stripe-webhook.service';
+import { PaymongoService } from '../payments/paymongo.service';
+import { PaymongoWebhookService } from '../payments/paymongo-webhook.service';
 
 function slugify(title: string): string {
   const base = title
@@ -51,6 +53,8 @@ export class CampaignsService {
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
     private readonly stripeWebhooks: StripeWebhookService,
+    private readonly paymongo: PaymongoService,
+    private readonly paymongoWebhooks: PaymongoWebhookService,
   ) {}
 
   async listPublic(): Promise<ApiCampaign[]> {
@@ -299,6 +303,80 @@ export class CampaignsService {
     }
     await this.stripeWebhooks.recordPaymentIntentFromRetrieved(pi);
     return { ok: true };
+  }
+
+  async createPaymongoQrDonation(
+    slug: string,
+    dto: {
+      donorDisplayName: string;
+      amount: number;
+      billingEmail?: string;
+      billingPhone?: string;
+    },
+  ): Promise<{ paymentIntentId: string; clientKey: string; qrImageUrl: string }> {
+    const c = await this.getCampaignRowBySlug(slug);
+    if (!isPublicVisible(c)) {
+      throw new BadRequestException('Donations are only accepted on approved, published campaigns.');
+    }
+    const email =
+      dto.billingEmail?.trim() ||
+      `donors+${encodeURIComponent(c.slug).slice(0, 48)}@example.com`;
+    const phone = (dto.billingPhone?.replace(/\s+/g, '') || '09171234567').slice(0, 20);
+    return this.paymongo.createQrDonation({
+      amountPhp: dto.amount,
+      campaignSlug: c.slug,
+      campaignTitle: c.title,
+      donorDisplayName: dto.donorDisplayName.trim(),
+      billingEmail: email,
+      billingPhone: phone,
+    });
+  }
+
+  /** Test-mode card: PaymentIntent only; browser attaches PM with `pk_test_` + `client_key`. */
+  async createPaymongoCardDonation(
+    slug: string,
+    dto: {
+      donorDisplayName: string;
+      amount: number;
+      billingEmail?: string;
+      billingPhone?: string;
+    },
+  ): Promise<{ paymentIntentId: string; clientKey: string }> {
+    const c = await this.getCampaignRowBySlug(slug);
+    if (!isPublicVisible(c)) {
+      throw new BadRequestException('Donations are only accepted on approved, published campaigns.');
+    }
+    return this.paymongo.createCardDonationIntent({
+      amountPhp: dto.amount,
+      campaignSlug: c.slug,
+      campaignTitle: c.title,
+      donorDisplayName: dto.donorDisplayName.trim(),
+    });
+  }
+
+  /** Poll from the client after QR scan; records when PayMongo marks the intent succeeded. */
+  async syncPaymongoDonation(
+    slug: string,
+    paymentIntentId: string,
+  ): Promise<{ recorded: boolean; alreadyRecorded: boolean; status: string }> {
+    let row: Awaited<ReturnType<PaymongoService['retrievePaymentIntent']>>;
+    try {
+      row = await this.paymongo.retrievePaymentIntent(paymentIntentId);
+    } catch {
+      throw new BadRequestException('Could not retrieve PayMongo payment intent.');
+    }
+    const metaSlug = row.attributes.metadata?.campaign_slug?.trim();
+    if (!metaSlug || metaSlug !== slug) {
+      throw new BadRequestException('This payment does not belong to this campaign.');
+    }
+    const outcome = await this.paymongoWebhooks.recordDonationIfSucceededIntent({
+      paymentIntentId: row.id,
+    });
+    return {
+      status: row.attributes.status,
+      recorded: outcome === 'created',
+      alreadyRecorded: outcome === 'exists',
+    };
   }
 
   async addDonation(

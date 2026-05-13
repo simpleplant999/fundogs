@@ -97,6 +97,8 @@ model Donation {
   stripeCheckoutSessionId String?                      @unique
   /** Set when paid via embedded Payment Element — webhook idempotency */
   stripePaymentIntentId   String?                      @unique
+  /** PayMongo PaymentIntent id (QR Ph / wallets) — webhook + sync idempotency */
+  paymongoPaymentIntentId String?                      @unique
   verificationStatus      DonationVerificationStatus @default(PENDING)
   createdAt               DateTime                     @default(now())
 }
