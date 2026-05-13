@@ -8,5 +8,6 @@ import { PaymentsModule } from '../payments/payments.module';
   imports: [AuthModule, PaymentsModule],
   controllers: [CampaignsController],
   providers: [CampaignsService],
+  exports: [CampaignsService],
 })
 export class CampaignsModule {}

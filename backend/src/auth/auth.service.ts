@@ -11,10 +11,14 @@ import { OrganizationMemberRole, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtUserPayload } from './jwt.strategy';
 import type { UpdateMeDto } from './dto/update-me.dto';
+import { mapOrganizationMemberRoleToPublic } from '../common/org-member-role.util';
 
 const userOrgSelect = { id: true, name: true, slug: true } as const;
 
-type UserWithOrg = Pick<User, 'id' | 'email' | 'fullName' | 'role' | 'organizationMemberRole'> & {
+type UserWithOrg = Pick<
+  User,
+  'id' | 'email' | 'fullName' | 'role' | 'organizationMemberRole' | 'profilePhotoUrl'
+> & {
   organization: { id: string; name: string; slug: string } | null;
 };
 
@@ -39,14 +43,14 @@ export class AuthService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      profilePhotoUrl: user.profilePhotoUrl ?? '',
       role: user.role,
       organization: user.organization
         ? {
             id: user.organization.id,
             name: user.organization.name,
             slug: user.organization.slug,
-            memberRole:
-              user.organizationMemberRole === OrganizationMemberRole.ADMIN ? 'ADMIN' : 'MEMBER',
+            memberRole: mapOrganizationMemberRoleToPublic(user.organizationMemberRole),
           }
         : null,
     };
@@ -119,13 +123,17 @@ export class AuthService {
     const newPassword = dto.newPassword?.trim();
     const hasName = fullName !== undefined && fullName.length > 0;
     const hasPw = newPassword !== undefined && newPassword.length > 0;
+    const hasPhotoUpdate = dto.profilePhotoUrl !== undefined;
 
-    if (!hasName && !hasPw) {
-      throw new BadRequestException('Provide a name update and/or a new password.');
+    if (!hasName && !hasPw && !hasPhotoUpdate) {
+      throw new BadRequestException(
+        'Provide a name update, a new password, and/or a profile photo update.',
+      );
     }
 
-    const data: { fullName?: string; passwordHash?: string } = {};
+    const data: { fullName?: string; passwordHash?: string; profilePhotoUrl?: string } = {};
     if (hasName) data.fullName = fullName;
+    if (hasPhotoUpdate) data.profilePhotoUrl = (dto.profilePhotoUrl ?? '').trim();
 
     if (hasPw) {
       if (!dto.currentPassword) {
@@ -144,6 +152,15 @@ export class AuthService {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data,
+      include: { organization: { select: userOrgSelect } },
+    });
+    return this.stripUser(user as UserWithOrg);
+  }
+
+  async setProfilePhotoUrl(userId: string, profilePhotoUrl: string) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { profilePhotoUrl },
       include: { organization: { select: userOrgSelect } },
     });
     return this.stripUser(user as UserWithOrg);

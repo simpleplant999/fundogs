@@ -33,6 +33,28 @@ export async function fetchOrganizations(): Promise<PublicOrganizationListItem[]
   }
 }
 
+export type PublicUserProfile = {
+  id: string;
+  fullName: string;
+  profilePhotoUrl: string;
+  organization: { slug: string; name: string; memberRole: "ADMIN" | "MEMBER" } | null;
+  campaigns: Campaign[];
+};
+
+export async function fetchPublicUserProfile(userId: string): Promise<PublicUserProfile | null> {
+  const base = getApiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/users/${encodeURIComponent(userId)}/profile`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchPublishedCampaigns(): Promise<Campaign[] | null> {
   const base = getApiBase();
   if (!base) return null;

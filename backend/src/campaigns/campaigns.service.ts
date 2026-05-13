@@ -81,6 +81,32 @@ export class CampaignsService {
     return rows.map((c) => mapCampaign(c));
   }
 
+  /** Same visibility rules as {@link listPublic}, scoped to one author. */
+  async listPublicByAuthorId(authorId: string): Promise<ApiCampaign[]> {
+    const rows = await this.prisma.campaign.findMany({
+      where: {
+        authorId,
+        approvalStatus: CampaignApprovalStatus.APPROVED,
+        lifecycleStatus: {
+          in: [
+            CampaignLifecycleStatus.PUBLISHED,
+            CampaignLifecycleStatus.DONE,
+          ],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    });
+    return rows.map((c) => mapCampaign(c));
+  }
+
   async listMine(userId: string) {
     const rows = await this.prisma.campaign.findMany({
       where: { authorId: userId },

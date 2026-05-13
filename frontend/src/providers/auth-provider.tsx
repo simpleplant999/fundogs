@@ -17,6 +17,8 @@ export type AuthUser = {
   id: string;
   email: string;
   fullName: string;
+  /** Public URL from server after upload, or empty */
+  profilePhotoUrl?: string;
   role: 'USER' | 'ADMIN';
   organization: {
     id: string;
@@ -30,6 +32,8 @@ export type UpdateMeInput = {
   fullName?: string;
   currentPassword?: string;
   newPassword?: string;
+  /** Pass empty string to clear the profile photo. */
+  profilePhotoUrl?: string;
 };
 
 type AuthContextValue = {
@@ -46,6 +50,7 @@ type AuthContextValue = {
   logout: () => void;
   refreshMe: () => Promise<void>;
   updateMe: (patch: UpdateMeInput) => Promise<void>;
+  uploadProfilePhoto: (file: File) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -107,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (patch.fullName !== undefined) body.fullName = patch.fullName.trim();
     if (patch.newPassword !== undefined) body.newPassword = patch.newPassword;
     if (patch.currentPassword !== undefined) body.currentPassword = patch.currentPassword;
+    if (patch.profilePhotoUrl !== undefined) body.profilePhotoUrl = patch.profilePhotoUrl;
     if (Object.keys(body).length === 0) throw new Error('Nothing to update.');
     const res = await fetch(`${base}/auth/me`, {
       method: 'PATCH',
@@ -115,6 +121,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Authorization: `Bearer ${t}`,
       },
       body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(parseApiError(data));
+    const me = data as AuthUser;
+    setUser({
+      ...me,
+      organization: me.organization
+        ? {
+            ...me.organization,
+            memberRole: me.organization.memberRole ?? 'MEMBER',
+          }
+        : null,
+    });
+  }, []);
+
+  const uploadProfilePhoto = useCallback(async (file: File) => {
+    const base = getClientApiBase();
+    const t =
+      typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    if (!base || !t) throw new Error('Not signed in');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${base}/auth/me/profile-photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${t}` },
+      body: fd,
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(parseApiError(data));
@@ -201,8 +233,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refreshMe,
       updateMe,
+      uploadProfilePhoto,
     }),
-    [user, token, loading, login, register, logout, refreshMe, updateMe],
+    [user, token, loading, login, register, logout, refreshMe, updateMe, uploadProfilePhoto],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

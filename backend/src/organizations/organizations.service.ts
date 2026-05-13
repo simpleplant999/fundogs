@@ -4,9 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrganizationMemberRole, Prisma } from '@prisma/client';
+import {
+  CampaignApprovalStatus,
+  CampaignLifecycleStatus,
+  OrganizationMemberRole,
+  Prisma,
+} from '@prisma/client';
+import { mapCampaign } from '../campaigns/campaigns.mapper';
 import { PrismaService } from '../prisma/prisma.service';
 import { slugifyOrganizationName } from '../common/org-code.util';
+import { mapOrganizationMemberRoleToPublic } from '../common/org-member-role.util';
 
 @Injectable()
 export class OrganizationsService {
@@ -39,6 +46,56 @@ export class OrganizationsService {
       memberCount: org._count.members,
       createdAt: org.createdAt.toISOString(),
     };
+  }
+
+  /** Public campaigns whose author belongs to this organization (approved + published/done). */
+  async listPublicCampaignsByOrgSlug(slug: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const rows = await this.prisma.campaign.findMany({
+      where: {
+        approvalStatus: CampaignApprovalStatus.APPROVED,
+        lifecycleStatus: {
+          in: [CampaignLifecycleStatus.PUBLISHED, CampaignLifecycleStatus.DONE],
+        },
+        author: { organizationId: org.id },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            fullName: true,
+            organization: { select: { name: true, slug: true } },
+          },
+        },
+      },
+    });
+    return rows.map((c) => mapCampaign(c));
+  }
+
+  /** Public directory of member names (no emails). */
+  async listPublicMembersByOrgSlug(slug: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const members = await this.prisma.user.findMany({
+      where: { organizationId: org.id },
+      select: { id: true, fullName: true, profilePhotoUrl: true, organizationMemberRole: true },
+      orderBy: { fullName: 'asc' },
+    });
+    return members.map((m) => ({
+      id: m.id,
+      fullName: m.fullName,
+      profilePhotoUrl: m.profilePhotoUrl || '',
+      organizationMemberRole: mapOrganizationMemberRoleToPublic(m.organizationMemberRole),
+    }));
   }
 
   async listPublic() {
@@ -172,8 +229,7 @@ export class OrganizationsService {
       email: m.email,
       fullName: m.fullName,
       platformRole: m.role,
-      organizationMemberRole:
-        m.organizationMemberRole === OrganizationMemberRole.ADMIN ? 'ADMIN' : 'MEMBER',
+      organizationMemberRole: mapOrganizationMemberRoleToPublic(m.organizationMemberRole),
       createdAt: m.createdAt.toISOString(),
     }));
   }

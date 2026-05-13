@@ -7,6 +7,7 @@ import { AdminModule } from './admin/admin.module';
 import { PaymentsModule } from './payments/payments.module';
 
 import { OrganizationsModule } from './organizations/organizations.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
     CampaignsModule,
     AdminModule,
     OrganizationsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

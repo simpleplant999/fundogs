@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useCallback, useEffect, useId, useState } from 'react';
+import { CampaignCard } from '@/components/campaign-card';
 import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
-import { useCallback, useEffect, useState } from 'react';
 import { getClientApiBase } from '@/providers/auth-provider';
+import type { Campaign } from '@/lib/types';
 
 export type PublicOrganization = {
   id: string;
@@ -17,24 +19,48 @@ export type PublicOrganization = {
   createdAt: string;
 };
 
+export type PublicOrgProfileMember = {
+  id: string;
+  fullName: string;
+  profilePhotoUrl: string;
+  organizationMemberRole: 'ADMIN' | 'MEMBER';
+};
+
+type OrgTab = 'campaigns' | 'members' | 'photos';
+
 export function OrganizationPublicClient({ slug }: { slug: string }) {
   const api = getClientApiBase();
+  const tabListId = useId();
   const [org, setOrg] = useState<PublicOrganization | null>(null);
   const [status, setStatus] = useState<'loading' | 'ok' | 'missing'>('loading');
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [members, setMembers] = useState<PublicOrgProfileMember[]>([]);
+  const [extrasLoaded, setExtrasLoaded] = useState(false);
+  const [tab, setTab] = useState<OrgTab>('campaigns');
 
   const load = useCallback(async () => {
     if (!api) {
       setStatus('missing');
       return;
     }
-    const res = await fetch(`${api}/organizations/${encodeURIComponent(slug)}`, { cache: 'no-store' });
-    if (!res.ok) {
+    setExtrasLoaded(false);
+    const orgRes = await fetch(`${api}/organizations/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+    if (!orgRes.ok) {
       setOrg(null);
       setStatus('missing');
       return;
     }
-    setOrg(await res.json());
+    const orgJson = (await orgRes.json()) as PublicOrganization;
+    setOrg(orgJson);
     setStatus('ok');
+
+    const [campRes, memRes] = await Promise.all([
+      fetch(`${api}/organizations/${encodeURIComponent(slug)}/campaigns`, { cache: 'no-store' }),
+      fetch(`${api}/organizations/${encodeURIComponent(slug)}/members`, { cache: 'no-store' }),
+    ]);
+    setCampaigns(campRes.ok ? ((await campRes.json()) as Campaign[]) : []);
+    setMembers(memRes.ok ? ((await memRes.json()) as PublicOrgProfileMember[]) : []);
+    setExtrasLoaded(true);
   }, [api, slug]);
 
   useEffect(() => {
@@ -60,10 +86,16 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
 
   const gallery = org.photoUrls?.length ? org.photoUrls : [];
 
+  const tabs: { id: OrgTab; label: string }[] = [
+    { id: 'campaigns', label: 'Campaigns' },
+    { id: 'members', label: 'Members' },
+    { id: 'photos', label: 'Photos' },
+  ];
+
   return (
-    <article className="mx-auto max-w-4xl px-4 pb-16 pt-8 sm:px-6">
+    <article className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6">
       <div className="overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm">
-        <div className="relative aspect-[21/9] w-full bg-amber-100">
+        <div className="relative aspect-[21/6] w-full bg-amber-100">
           {org.coverPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={org.coverPhotoUrl} alt="" className="h-full w-full object-cover" />
@@ -94,19 +126,140 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
           ) : (
             <p className="mt-8 text-sm italic text-amber-950/50">No bio yet.</p>
           )}
-          {gallery.length ? (
-            <div className="mt-10">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-amber-950/55">Photos</h2>
-              <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {gallery.map((url) => (
-                  <li key={url} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-amber-50">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="h-full w-full object-cover" />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+
+          <div className="mt-10">
+            <nav
+              id={tabListId}
+              role="tablist"
+              aria-label="Organization sections"
+              className="flex flex-wrap gap-2 border-b border-amber-900/10 pb-3"
+            >
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  id={`${tabListId}-${t.id}`}
+                  aria-selected={tab === t.id}
+                  aria-controls={`${tabListId}-panel-${t.id}`}
+                  tabIndex={tab === t.id ? 0 : -1}
+                  onClick={() => setTab(t.id)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ring-1 transition-colors ${
+                    tab === t.id
+                      ? 'bg-amber-950 text-amber-50 ring-amber-950'
+                      : 'text-amber-950 ring-amber-900/15 hover:bg-amber-50'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+
+            {!extrasLoaded ? (
+              <p className="mt-6 text-sm text-amber-950/60">Loading…</p>
+            ) : (
+              <>
+                <div
+                  id={`${tabListId}-panel-campaigns`}
+                  role="tabpanel"
+                  aria-labelledby={`${tabListId}-campaigns`}
+                  hidden={tab !== 'campaigns'}
+                  className="mt-6"
+                >
+                  {campaigns.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-amber-900/15 bg-amber-50/50 px-4 py-8 text-center text-sm text-amber-950/70">
+                      No public campaigns from this organization yet.
+                    </p>
+                  ) : (
+                    <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {campaigns.map((c) => (
+                        <li key={c.id}>
+                          <CampaignCard campaign={c} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div
+                  id={`${tabListId}-panel-members`}
+                  role="tabpanel"
+                  aria-labelledby={`${tabListId}-members`}
+                  hidden={tab !== 'members'}
+                  className="mt-6"
+                >
+                  {members.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-amber-900/15 bg-amber-50/50 px-4 py-8 text-center text-sm text-amber-950/70">
+                      No members listed.
+                    </p>
+                  ) : (
+                    <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {members.map((m) => {
+                        const initial = (m.fullName?.trim().charAt(0) || '?').toUpperCase();
+                        const photo = m.profilePhotoUrl?.trim();
+                        return (
+                          <li key={m.id}>
+                            <Link
+                              href={`/users/${encodeURIComponent(m.id)}?returnTo=${encodeURIComponent(`/organizations/${slug}`)}`}
+                              className="group flex h-full flex-col items-center rounded-2xl border border-amber-900/10 bg-white p-5 text-center shadow-sm outline-none ring-teal-600/0 transition-shadow hover:border-amber-900/20 hover:shadow-md focus-visible:ring-2"
+                              aria-label={`View profile: ${m.fullName}`}
+                            >
+                              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-amber-900/10 bg-amber-50 shadow-inner">
+                                {photo ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={photo} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-amber-950/35">
+                                    {initial}
+                                  </div>
+                                )}
+                              </div>
+                              <p className="mt-4 text-base font-semibold leading-snug text-amber-950">{m.fullName}</p>
+                              <span
+                                className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold transition-colors group-hover:ring-teal-700/20 ${
+                                  m.organizationMemberRole === 'ADMIN'
+                                    ? 'bg-amber-950/10 text-amber-950 ring-1 ring-amber-950/15'
+                                    : 'bg-amber-100 text-amber-900 ring-1 ring-amber-900/10'
+                                }`}
+                              >
+                                {m.organizationMemberRole === 'ADMIN' ? 'Organization admin' : 'Member'}
+                              </span>
+                              <span className="mt-4 text-sm font-semibold text-teal-800 underline decoration-teal-800/30 underline-offset-2 group-hover:decoration-teal-800">
+                                View profile
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                <div
+                  id={`${tabListId}-panel-photos`}
+                  role="tabpanel"
+                  aria-labelledby={`${tabListId}-photos`}
+                  hidden={tab !== 'photos'}
+                  className="mt-6"
+                >
+                  {gallery.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-amber-900/15 bg-amber-50/50 px-4 py-8 text-center text-sm text-amber-950/70">
+                      No gallery photos yet.
+                    </p>
+                  ) : (
+                    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {gallery.map((url) => (
+                        <li key={url} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-amber-50">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </article>

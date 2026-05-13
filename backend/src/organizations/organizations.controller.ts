@@ -15,6 +15,16 @@ export class OrganizationsController {
     return this.orgs.listPublic();
   }
 
+  @Get(':slug/campaigns')
+  listCampaignsBySlug(@Param('slug') slug: string) {
+    return this.orgs.listPublicCampaignsByOrgSlug(slug);
+  }
+
+  @Get(':slug/members')
+  listMembersBySlug(@Param('slug') slug: string) {
+    return this.orgs.listPublicMembersByOrgSlug(slug);
+  }
+
   @Get(':slug')
   getBySlug(@Param('slug') slug: string) {
     return this.orgs.findPublicBySlug(slug);

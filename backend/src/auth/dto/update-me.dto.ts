@@ -16,4 +16,10 @@ export class UpdateMeDto {
   @IsString()
   @MinLength(1)
   currentPassword?: string;
+
+  /** Set to empty string to clear the profile photo URL. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  profilePhotoUrl?: string;
 }

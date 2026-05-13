@@ -1,8 +1,15 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import {
+  publicUserProfilePhotoUrl,
+  userProfilePhotoFileFilter,
+  userProfilePhotoMulterStorage,
+} from './auth-upload.storage';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtUserPayload } from './jwt.strategy';
 
@@ -24,6 +31,25 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   me(@CurrentUser() user: JwtUserPayload) {
     return this.auth.getMe(user.sub);
+  }
+
+  @Post('me/profile-photo')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: userProfilePhotoMulterStorage(),
+      fileFilter: userProfilePhotoFileFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  uploadProfilePhoto(
+    @CurrentUser() user: JwtUserPayload,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    if (!file) throw new BadRequestException('Choose an image file');
+    const url = publicUserProfilePhotoUrl(req, file.filename);
+    return this.auth.setProfilePhotoUrl(user.sub, url);
   }
 
   @Patch('me')
