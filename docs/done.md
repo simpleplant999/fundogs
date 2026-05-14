@@ -6,3 +6,5 @@
 - Add description on card payment 
 - When logged in, automatically use the First Name and the inital of the last name, 
 - Add anonymous donate name - do it using switch
+- On homepage, fundraising campaign Make it 3 columns and 2 rows 
+- Allow campaign creator to withdraw the money to his/her bank account (bank account should be entered on the platform and only admin and the creator can view) - This is a manual process for now to request for withdrawal then manually updates the request on that campaign and align the current balance and status - Add bank details (Name, Bank Name, Account Number)

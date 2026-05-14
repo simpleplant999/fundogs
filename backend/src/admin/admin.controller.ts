@@ -16,6 +16,8 @@ import { ModerateCommentDto } from './dto/moderate-comment.dto';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
+import { UpdateWithdrawalRequestDto } from '../withdrawals/dto/update-withdrawal-request.dto';
+import { WithdrawalsService } from '../withdrawals/withdrawals.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
@@ -23,7 +25,10 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly withdrawals: WithdrawalsService,
+  ) {}
 
   @Get('summary')
   summary() {
@@ -103,6 +108,21 @@ export class AdminController {
   @Delete('campaigns/:id')
   deleteCampaign(@Param('id') id: string) {
     return this.admin.deleteCampaign(id);
+  }
+
+  @Get('withdrawals')
+  listWithdrawals() {
+    return this.withdrawals.listAdminWithdrawals();
+  }
+
+  @Patch('withdrawals/:id')
+  updateWithdrawal(@Param('id') id: string, @Body() dto: UpdateWithdrawalRequestDto) {
+    return this.withdrawals.updateAdminWithdrawal(id, dto);
+  }
+
+  @Get('campaigns/:id/bank-account')
+  getCampaignBankAccount(@Param('id') id: string) {
+    return this.withdrawals.getAdminCampaignBankAccount(id);
   }
 
   @Get('comments/pending')

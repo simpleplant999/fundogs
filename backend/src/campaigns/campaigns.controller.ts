@@ -24,6 +24,9 @@ import { SyncStripeCheckoutDto } from './dto/sync-stripe-checkout.dto';
 import { SyncStripePaymentIntentDto } from './dto/sync-stripe-payment-intent.dto';
 import { SyncPaymongoIntentDto } from './dto/sync-paymongo-intent.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import { UpsertCampaignBankAccountDto } from '../withdrawals/dto/upsert-campaign-bank-account.dto';
+import { CreateWithdrawalRequestDto } from '../withdrawals/dto/create-withdrawal-request.dto';
+import { WithdrawalsService } from '../withdrawals/withdrawals.service';
 import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtUserPayload } from '../auth/jwt.strategy';
@@ -35,7 +38,10 @@ import {
 
 @Controller('campaigns')
 export class CampaignsController {
-  constructor(private readonly campaigns: CampaignsService) {}
+  constructor(
+    private readonly campaigns: CampaignsService,
+    private readonly withdrawals: WithdrawalsService,
+  ) {}
 
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
@@ -51,6 +57,38 @@ export class CampaignsController {
     @Body() dto: UpdateCampaignDto,
   ) {
     return this.campaigns.updateMine(user.sub, id, dto);
+  }
+
+  @Get('me/:id/bank-account')
+  @UseGuards(AuthGuard('jwt'))
+  getMyBankAccount(@CurrentUser() user: JwtUserPayload, @Param('id') id: string) {
+    return this.withdrawals.getCreatorBankAccount(user.sub, id);
+  }
+
+  @Patch('me/:id/bank-account')
+  @UseGuards(AuthGuard('jwt'))
+  upsertMyBankAccount(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() dto: UpsertCampaignBankAccountDto,
+  ) {
+    return this.withdrawals.upsertCreatorBankAccount(user.sub, id, dto);
+  }
+
+  @Get('me/:id/withdrawals')
+  @UseGuards(AuthGuard('jwt'))
+  listMyWithdrawals(@CurrentUser() user: JwtUserPayload, @Param('id') id: string) {
+    return this.withdrawals.listCreatorWithdrawals(user.sub, id);
+  }
+
+  @Post('me/:id/withdrawals')
+  @UseGuards(AuthGuard('jwt'))
+  createMyWithdrawal(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateWithdrawalRequestDto,
+  ) {
+    return this.withdrawals.createCreatorWithdrawal(user.sub, id, dto);
   }
 
   @Post()

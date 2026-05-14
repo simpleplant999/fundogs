@@ -44,6 +44,13 @@ enum DonationVerificationStatus {
   REJECTED
 }
 
+enum WithdrawalRequestStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -59,6 +66,7 @@ model User {
 
   campaigns Campaign[]
   comments  Comment[]
+  withdrawalRequests WithdrawalRequest[]
 }
 
 model Organization {
@@ -85,6 +93,7 @@ model Campaign {
   imageUrls       String[]                @default([])
   goalAmount      Float
   raisedAmount    Float                   @default(0)
+  withdrawnAmount Float                   @default(0)
   lifecycleStatus CampaignLifecycleStatus @default(DRAFT)
   approvalStatus  CampaignApprovalStatus  @default(PENDING)
   recipientName   String
@@ -96,6 +105,35 @@ model Campaign {
 
   comments  Comment[]
   donations Donation[]
+  bankAccount CampaignBankAccount?
+  withdrawalRequests WithdrawalRequest[]
+}
+
+model CampaignBankAccount {
+  id                String   @id @default(uuid())
+  campaignId        String   @unique
+  campaign          Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  accountHolderName String
+  bankName          String
+  accountNumber     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model WithdrawalRequest {
+  id            String                  @id @default(uuid())
+  campaignId    String
+  campaign      Campaign                @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  requestedById String
+  requestedBy   User                    @relation(fields: [requestedById], references: [id])
+  amount        Float
+  status        WithdrawalRequestStatus @default(REQUESTED)
+  adminNote     String                  @default("")
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
 }
 
 model Comment {
