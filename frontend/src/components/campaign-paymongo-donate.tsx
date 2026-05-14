@@ -460,47 +460,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
     <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-bold text-amber-950">Donate with PayMongo</h2>
       <p className="mt-1 text-xs text-amber-950/65">
-        Enter your details, then choose how to donate: QR Ph or a sandbox test card. Minimum PHP 20. Server needs{' '}
-        <code className="rounded bg-amber-100/80 px-1">PAYMONGO_SECRET_KEY</code>.
+        Enter your details, then choose how to donate: QR Ph or a card. Minimum PHP 20.
       </p>
-      {paymongoPkMisconfigured ? (
-        <div
-          role="alert"
-          className="mt-3 rounded-lg border border-red-200 bg-red-50/95 p-3 text-sm text-red-950"
-        >
-          <p className="font-medium">Fix `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY`</p>
-          {paymongoKeyLooksLikeIntentClientKey(paymongoPk) ? (
-            <p className="mt-2 text-red-900/95">
-              You pasted a <strong>PaymentIntent client_key</strong> (<code className="rounded bg-red-100/90 px-1">pi_…_client_…</code>).
-              That is only for attaching a card to one intent — it is <strong>not</strong> an API key. In the PayMongo
-              Dashboard open <strong>Developers → API keys</strong> and copy the <strong>Publishable</strong> key (
-              <code className="rounded bg-red-100/90 px-1">pk_test_…</code>), then restart{' '}
-              <code className="rounded bg-red-100/90 px-1">npm run dev</code>.
-            </p>
-          ) : /^sk_/i.test(paymongoPk) ? (
-            <p className="mt-2 text-red-900/95">
-              Never put your <strong>Secret</strong> key (<code className="rounded bg-red-100/90 px-1">sk_…</code>) in a{' '}
-              <code className="rounded bg-red-100/90 px-1">NEXT_PUBLIC_*</code> variable — it would ship to the browser.
-              Use only the <strong>Publishable</strong> key (<code className="rounded bg-red-100/90 px-1">pk_test_…</code>).
-            </p>
-          ) : (
-            <p className="mt-2 text-red-900/95">
-              This value must be your <strong>Publishable</strong> key from PayMongo (
-              <code className="rounded bg-red-100/90 px-1">pk_test_…</code> or{' '}
-              <code className="rounded bg-red-100/90 px-1">pk_live_…</code>). See{' '}
-              <a
-                href="https://developers.paymongo.com/docs/authentication"
-                className="font-medium text-red-950 underline underline-offset-2"
-                target="_blank"
-                rel="noreferrer"
-              >
-                PayMongo authentication
-              </a>
-              .
-            </p>
-          )}
-        </div>
-      ) : null}
       <div className="mt-3 space-y-2">
         <label className="block text-sm font-medium text-amber-950">
           Name (shown publicly)
