@@ -307,11 +307,11 @@ export function CampaignPageClient({
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 ring-1 ring-amber-600/25">
               {campaign.status}
             </span>
-            {campaign.approvalStatus ? (
+            {/* {campaign.approvalStatus ? (
               <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-800 ring-1 ring-zinc-400/30">
                 Approval: {campaign.approvalStatus}
               </span>
-            ) : null}
+            ) : null} */}
           </div>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
             <h1 className="min-w-0 flex-1 text-3xl font-bold tracking-tight text-amber-950 sm:text-4xl">

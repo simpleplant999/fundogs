@@ -164,10 +164,14 @@ function assertPaymongoPublishableKeyForBrowser(publicKey: string): void {
 }
 
 type Props = {
-  slug: string;
   api: string;
+  scope?: 'campaign' | 'platform';
+  slug?: string;
   campaignTitle: string;
   campaignDescription?: string;
+  sectionTitle?: string;
+  sectionIntro?: string;
+  successMessage?: string;
   onPaid?: (info: { amountAddedPhp: number }) => void;
 };
 
@@ -192,12 +196,20 @@ function isPaymongoPaid(data: SyncPaymongoResponse): boolean {
 
 /** PayMongo QR Ph (GCash, Maya, …) plus optional sandbox test card when `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY` is `pk_test_`. */
 export function CampaignPaymongoDonate({
+  scope = 'campaign',
   slug,
   api,
   campaignTitle,
   campaignDescription,
+  sectionTitle,
+  sectionIntro,
+  successMessage,
   onPaid,
 }: Props) {
+  const donationsPath =
+    scope === 'platform'
+      ? `${api}/support/donations`
+      : `${api}/campaigns/${encodeURIComponent(slug ?? '')}/donations`;
   const paymongoPk = (process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY ?? '').trim();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -238,14 +250,11 @@ export function CampaignPaymongoDonate({
     const id = piRef.current;
     if (!id) return;
     try {
-      const res = await fetch(
-        `${api}/campaigns/${encodeURIComponent(slug)}/donations/sync-paymongo`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentIntentId: id }),
-        },
-      );
+      const res = await fetch(`${donationsPath}/sync-paymongo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentIntentId: id }),
+      });
       const data = (await res.json().catch(() => ({}))) as SyncPaymongoResponse;
       if (!res.ok) return;
       if (isPaymongoPaid(data)) finishPaid();
@@ -291,7 +300,7 @@ export function CampaignPaymongoDonate({
       const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt };
       if (email.trim()) body.billingEmail = email.trim();
       if (phone.trim()) body.billingPhone = phone.trim();
-      const res = await fetch(`${api}/campaigns/${encodeURIComponent(slug)}/donations/paymongo-qr`, {
+      const res = await fetch(`${donationsPath}/paymongo-qr`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -351,7 +360,7 @@ export function CampaignPaymongoDonate({
       const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt };
       if (email.trim()) body.billingEmail = email.trim();
       if (phone.trim()) body.billingPhone = phone.trim();
-      const res = await fetch(`${api}/campaigns/${encodeURIComponent(slug)}/donations/paymongo-card`, {
+      const res = await fetch(`${donationsPath}/paymongo-card`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -370,7 +379,7 @@ export function CampaignPaymongoDonate({
         return;
       }
       const billingEmail =
-        email.trim() || `donors+${encodeURIComponent(slug).slice(0, 48)}@example.com`;
+        email.trim() || `donors+${encodeURIComponent(slug ?? 'platform').slice(0, 48)}@example.com`;
       const pmId = await paymongoCreateCardPaymentMethod(paymongoPk, cardDetails, {
         name: nm,
         email: billingEmail,
@@ -395,7 +404,8 @@ export function CampaignPaymongoDonate({
       <div className="rounded-xl border border-teal-600/25 bg-teal-50/80 p-5">
         <p className="text-base font-semibold text-teal-950">Thank you!</p>
         <p className="mt-2 text-sm text-teal-900/90">
-          PayMongo received your donation. Your gift should appear in the totals and donor list shortly.
+          {successMessage ??
+            'PayMongo received your donation. Your gift should appear in the totals and donor list shortly.'}
         </p>
         <button
           type="button"
@@ -468,25 +478,36 @@ export function CampaignPaymongoDonate({
 
   return (
     <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-bold text-amber-950">Donate with PayMongo</h2>
+      <h2 className="text-lg font-bold text-amber-950">{sectionTitle ?? 'Donate with PayMongo'}</h2>
       <p className="mt-1 text-xs text-amber-950/65">
-        Enter your details, then choose how to donate: QR Ph or a card. Minimum PHP 20.
+        {sectionIntro ??
+          'Enter your details, then choose how to donate: QR Ph or a card. Minimum PHP 20.'}
       </p>
 
       <div className="mt-3 space-y-2">
         <label className="block text-sm font-medium text-amber-950">
           Name (shown publicly)
+          <span className="text-rose-700" aria-hidden="true">
+            {' '}
+            *
+          </span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={120}
             disabled={busy}
+            required
+            aria-required="true"
             className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
             placeholder="e.g. Alex M."
           />
         </label>
         <label className="block text-sm font-medium text-amber-950">
           Amount (PHP, min 20)
+          <span className="text-rose-700" aria-hidden="true">
+            {' '}
+            *
+          </span>
           <input
             type="number"
             min={20}
@@ -494,6 +515,8 @@ export function CampaignPaymongoDonate({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             disabled={busy}
+            required
+            aria-required="true"
             className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
             placeholder="500"
           />

@@ -44,7 +44,29 @@ async function main() {
     console.log('Created demo user:', demoEmail, '/', demoPass);
   }
 
-  const existing = await prisma.campaign.count();
+  await prisma.campaign.upsert({
+    where: { slug: 'fundogs-platform-support' },
+    create: {
+      slug: 'fundogs-platform-support',
+      title: 'FunDogs platform support',
+      description:
+        'Contributions that keep FunDogs online and help us reach more animals in need.',
+      imageUrl:
+        'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=800&q=80',
+      goalAmount: 1_000_000,
+      raisedAmount: 0,
+      lifecycleStatus: CampaignLifecycleStatus.PUBLISHED,
+      approvalStatus: CampaignApprovalStatus.APPROVED,
+      recipientName: 'FunDogs',
+      recipientNote: 'Platform operations and animal rescue support.',
+      authorId: admin.id,
+    },
+    update: {},
+  });
+
+  const existing = await prisma.campaign.count({
+    where: { slug: { not: 'fundogs-platform-support' } },
+  });
   if (existing > 0) {
     console.log('Campaigns already seeded, skipping.');
     return;

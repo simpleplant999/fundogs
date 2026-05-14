@@ -22,6 +22,7 @@ import { StripeService } from '../payments/stripe.service';
 import { StripeWebhookService } from '../payments/stripe-webhook.service';
 import { PaymongoService } from '../payments/paymongo.service';
 import { PaymongoWebhookService } from '../payments/paymongo-webhook.service';
+import { PLATFORM_SUPPORT_CAMPAIGN_SLUG } from '../support/platform-support.constants';
 
 function slugify(title: string): string {
   const base = title
@@ -68,6 +69,7 @@ export class CampaignsService {
   async listPublic(): Promise<ApiCampaign[]> {
     const rows = await this.prisma.campaign.findMany({
       where: {
+        slug: { not: PLATFORM_SUPPORT_CAMPAIGN_SLUG },
         approvalStatus: CampaignApprovalStatus.APPROVED,
         lifecycleStatus: {
           in: [
@@ -89,6 +91,7 @@ export class CampaignsService {
     const rows = await this.prisma.campaign.findMany({
       where: {
         authorId,
+        slug: { not: PLATFORM_SUPPORT_CAMPAIGN_SLUG },
         approvalStatus: CampaignApprovalStatus.APPROVED,
         lifecycleStatus: {
           in: [

@@ -11,8 +11,11 @@ export function SiteHeader() {
     { href: '/', label: 'Home' },
     { href: '/donate', label: 'Donate Now' },
     { href: '/organizations', label: 'Organizations' },
-    { href: '/campaigns/dashboard', label: 'My campaigns' },
+    ...(user ? [{ href: '/campaigns/dashboard', label: 'My campaigns' }] : []),
   ];
+
+  const navLinkClass =
+    'rounded-md px-1 py-0.5 transition hover:text-teal-800 hover:underline underline-offset-4';
 
   return (
     <header className="sticky top-0 z-50 shrink-0 border-b border-amber-900/10 bg-[#fffaf3]/90 backdrop-blur-md">
@@ -28,14 +31,16 @@ export function SiteHeader() {
         </Link>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium text-amber-950/80">
           {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-1 py-0.5 transition hover:text-teal-800 hover:underline underline-offset-4"
-            >
+            <Link key={item.href} href={item.href} className={navLinkClass}>
               {item.label}
             </Link>
           ))}
+          <Link
+            href="/support"
+            className="rounded-full bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
+          >
+            Support us
+          </Link>
           {user?.role === 'ADMIN' ? (
             <Link
               href="/admin"
