@@ -553,7 +553,6 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
           ) : (
             <div className="rounded-xl border border-teal-700/20 bg-teal-50/35 p-4">
               <h3 className="text-sm font-semibold text-teal-950">Card</h3>
-              <p className="mt-1 text-xs text-teal-900/75">
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-teal-950 sm:col-span-2">
                   Card number
