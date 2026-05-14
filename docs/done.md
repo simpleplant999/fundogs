@@ -4,3 +4,5 @@
 - Add a profile view on the user
 - Add Creator and Organization on Campaign View 
 - Add description on card payment 
+- When logged in, automatically use the First Name and the inital of the last name, 
+- Add anonymous donate name - do it using switch

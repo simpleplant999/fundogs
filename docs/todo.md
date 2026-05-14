@@ -1,6 +1,5 @@
 - Add timeline / Updates- updates on the campaign, the user can do this either on my campaigns or do it directly to campaign view
-- When logged in, automatically use the First Name and the inital of the last name, 
-- Add anonymous donate name - do it using switch
+
 - On homepage, fundraising campaign Make it 3 columns and 2 rows 
 
 

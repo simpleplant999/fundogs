@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { donorDisplayNameFromFullName, isDonorDisplayNameReady, resolveDonorDisplayName } from '@/lib/donor-display-name';
+import { useAuth } from '@/providers/auth-provider';
+import { ToggleSwitch } from '@/components/toggle-switch';
 
 const PAYMONGO_API = 'https://api.paymongo.com/v1';
 
@@ -211,7 +214,9 @@ export function CampaignPaymongoDonate({
       ? `${api}/support/donations`
       : `${api}/campaigns/${encodeURIComponent(slug ?? '')}/donations`;
   const paymongoPk = (process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY ?? '').trim();
+  const { user, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
+  const [donateAnonymously, setDonateAnonymously] = useState(false);
   const [amount, setAmount] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -231,6 +236,13 @@ export function CampaignPaymongoDonate({
   const amountRef = useRef(0);
   const paidNotifiedRef = useRef(false);
   piRef.current = piId;
+
+  useEffect(() => {
+    if (authLoading || donateAnonymously) return;
+    const fromProfile = user?.fullName ? donorDisplayNameFromFullName(user.fullName) : '';
+    if (!fromProfile) return;
+    setName((current) => (current.trim() ? current : fromProfile));
+  }, [authLoading, user?.fullName, donateAnonymously]);
 
   const finishPaid = useCallback(() => {
     if (!paidNotifiedRef.current) {
@@ -282,8 +294,8 @@ export function CampaignPaymongoDonate({
   async function startQr() {
     setErr(null);
     const amt = Number(amount);
-    const nm = name.trim();
-    if (!nm) {
+    const nm = resolveDonorDisplayName(name, donateAnonymously);
+    if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setErr('Enter the name to show with your gift.');
       setPaymongoFlow(null);
       return;
@@ -332,8 +344,8 @@ export function CampaignPaymongoDonate({
   async function donateWithCard() {
     setErr(null);
     const amt = Number(amount);
-    const nm = name.trim();
-    if (!nm) {
+    const nm = resolveDonorDisplayName(name, donateAnonymously);
+    if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setErr('Enter the name to show with your gift.');
       return;
     }
@@ -474,7 +486,9 @@ export function CampaignPaymongoDonate({
 
   const parsedAmount = Number(amount);
   const canChooseDonationMethod =
-    name.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount >= 20;
+    isDonorDisplayNameReady(name, donateAnonymously) &&
+    Number.isFinite(parsedAmount) &&
+    parsedAmount >= 20;
 
   return (
     <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
@@ -485,23 +499,33 @@ export function CampaignPaymongoDonate({
       </p>
 
       <div className="mt-3 space-y-2">
-        <label className="block text-sm font-medium text-amber-950">
-          Name (shown publicly)
-          <span className="text-rose-700" aria-hidden="true">
-            {' '}
-            *
-          </span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-            disabled={busy}
-            required
-            aria-required="true"
-            className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
-            placeholder="e.g. Alex M."
-          />
-        </label>
+        <ToggleSwitch
+          id="donate-anonymously"
+          label="Donate anonymously"
+          description="Your gift will appear as Anonymous on the donor list."
+          checked={donateAnonymously}
+          onCheckedChange={setDonateAnonymously}
+          disabled={busy}
+        />
+        {!donateAnonymously ? (
+          <label className="block text-sm font-medium text-amber-950">
+            Name (shown publicly)
+            <span className="text-rose-700" aria-hidden="true">
+              {' '}
+              *
+            </span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              disabled={busy}
+              required
+              aria-required="true"
+              className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
+              placeholder="e.g. Alex M."
+            />
+          </label>
+        ) : null}
         <label className="block text-sm font-medium text-amber-950">
           Amount (PHP, min 20)
           <span className="text-rose-700" aria-hidden="true">
