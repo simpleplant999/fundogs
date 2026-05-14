@@ -47,6 +47,14 @@ function canViewCampaign(c: Campaign, viewer?: JwtUserPayload): boolean {
   return c.authorId === viewer.sub;
 }
 
+const AUTHOR_PUBLIC_SELECT = {
+  select: {
+    id: true,
+    fullName: true,
+    organization: { select: { name: true, slug: true } },
+  },
+} as const;
+
 @Injectable()
 export class CampaignsService {
   constructor(
@@ -70,12 +78,7 @@ export class CampaignsService {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        author: {
-          select: {
-            fullName: true,
-            organization: { select: { name: true, slug: true } },
-          },
-        },
+        author: AUTHOR_PUBLIC_SELECT,
       },
     });
     return rows.map((c) => mapCampaign(c));
@@ -96,12 +99,7 @@ export class CampaignsService {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        author: {
-          select: {
-            fullName: true,
-            organization: { select: { name: true, slug: true } },
-          },
-        },
+        author: AUTHOR_PUBLIC_SELECT,
       },
     });
     return rows.map((c) => mapCampaign(c));
@@ -112,12 +110,7 @@ export class CampaignsService {
       where: { authorId: userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        author: {
-          select: {
-            fullName: true,
-            organization: { select: { name: true, slug: true } },
-          },
-        },
+        author: AUTHOR_PUBLIC_SELECT,
       },
     });
     return rows.map((c) => ({
@@ -175,12 +168,7 @@ export class CampaignsService {
     const full = await this.prisma.campaign.findUnique({
       where: { id: updated.id },
       include: {
-        author: {
-          select: {
-            fullName: true,
-            organization: { select: { name: true, slug: true } },
-          },
-        },
+        author: AUTHOR_PUBLIC_SELECT,
       },
     });
     if (!full) throw new NotFoundException('Campaign not found');
@@ -191,12 +179,7 @@ export class CampaignsService {
     const c = await this.prisma.campaign.findUnique({
       where: { slug },
       include: {
-        author: {
-          select: {
-            fullName: true,
-            organization: { select: { name: true, slug: true } },
-          },
-        },
+        author: AUTHOR_PUBLIC_SELECT,
       },
     });
     if (!c) throw new NotFoundException(`Campaign not found: ${slug}`);
@@ -246,12 +229,7 @@ export class CampaignsService {
     const full = await this.prisma.campaign.findUnique({
       where: { id: c.id },
       include: {
-        author: {
-          select: {
-            fullName: true,
-            organization: { select: { name: true, slug: true } },
-          },
-        },
+        author: AUTHOR_PUBLIC_SELECT,
       },
     });
     if (!full) throw new NotFoundException('Campaign not found');

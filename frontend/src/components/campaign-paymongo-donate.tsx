@@ -166,6 +166,8 @@ function assertPaymongoPublishableKeyForBrowser(publicKey: string): void {
 type Props = {
   slug: string;
   api: string;
+  campaignTitle: string;
+  campaignDescription?: string;
   onPaid?: (info: { amountAddedPhp: number }) => void;
 };
 
@@ -189,7 +191,13 @@ function isPaymongoPaid(data: SyncPaymongoResponse): boolean {
 }
 
 /** PayMongo QR Ph (GCash, Maya, …) plus optional sandbox test card when `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY` is `pk_test_`. */
-export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
+export function CampaignPaymongoDonate({
+  slug,
+  api,
+  campaignTitle,
+  campaignDescription,
+  onPaid,
+}: Props) {
   const paymongoPk = (process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY ?? '').trim();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -203,10 +211,10 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
   const [paymongoFlow, setPaymongoFlow] = useState<null | 'qr' | 'card'>(null);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [piId, setPiId] = useState<string | null>(null);
-  const [cardNumber, setCardNumber] = useState('4343434343434345');
-  const [cardExpMM, setCardExpMM] = useState('12');
-  const [cardExpYY, setCardExpYY] = useState('34');
-  const [cardCvc, setCardCvc] = useState('123');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpMM, setCardExpMM] = useState('');
+  const [cardExpYY, setCardExpYY] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
   const piRef = useRef<string | null>(null);
   const amountRef = useRef(0);
   const paidNotifiedRef = useRef(false);
@@ -519,6 +527,7 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
                 className="flex flex-col items-start rounded-xl border border-teal-700/25 bg-teal-50/50 px-4 py-3 text-left transition hover:border-teal-700/40 hover:bg-teal-50/80 disabled:opacity-60"
               >
                 <span className="text-sm font-semibold text-teal-950">Card</span>
+                <span className="mt-1 text-xs text-teal-950/70">Pay with debit or credit card</span>
               </button>
           </div>
         </div>
@@ -553,6 +562,15 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
           ) : (
             <div className="rounded-xl border border-teal-700/20 bg-teal-50/35 p-4">
               <h3 className="text-sm font-semibold text-teal-950">Card</h3>
+              <p className="mt-2 text-sm font-medium text-teal-950">{campaignTitle}</p>
+              {campaignDescription?.trim() ? (
+                <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-teal-900/75">
+                  {campaignDescription.trim()}
+                </p>
+              ) : null}
+              <p className="mt-3 text-xs text-teal-900/70">
+                Your card statement may show a donation for this campaign.
+              </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-teal-950 sm:col-span-2">
                   Card number
@@ -561,6 +579,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
                     onChange={(e) => setCardNumber(e.target.value)}
                     disabled={busy}
                     autoComplete="cc-number"
+                    inputMode="numeric"
+                    placeholder="4343 4343 4343 4345"
                     className="mt-1 w-full rounded-lg border border-teal-800/15 bg-white px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-teal-50/50"
                   />
                 </label>
@@ -571,6 +591,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
                     onChange={(e) => setCardExpMM(e.target.value)}
                     disabled={busy}
                     maxLength={2}
+                    inputMode="numeric"
+                    placeholder="12"
                     className="mt-1 w-full rounded-lg border border-teal-800/15 bg-white px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-teal-50/50"
                   />
                 </label>
@@ -581,6 +603,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
                     onChange={(e) => setCardExpYY(e.target.value)}
                     disabled={busy}
                     maxLength={4}
+                    inputMode="numeric"
+                    placeholder="34"
                     className="mt-1 w-full rounded-lg border border-teal-800/15 bg-white px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-teal-50/50"
                   />
                 </label>
@@ -592,6 +616,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
                     disabled={busy}
                     maxLength={4}
                     autoComplete="cc-csc"
+                    inputMode="numeric"
+                    placeholder="123"
                     className="mt-1 w-full rounded-lg border border-teal-800/15 bg-white px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-teal-50/50"
                   />
                 </label>

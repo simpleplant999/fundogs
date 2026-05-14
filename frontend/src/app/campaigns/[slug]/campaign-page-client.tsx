@@ -7,6 +7,7 @@ import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
 import { CampaignShareMenu } from '@/components/campaign-share-menu';
 import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
 import { DonorsList } from '@/components/donors-list';
+import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
 import { ProgressBar } from '@/components/progress-bar';
 import { getCampaignImages } from '@/lib/campaign-images';
 import { formatPhp } from '@/lib/format-currency';
@@ -318,6 +319,31 @@ export function CampaignPageClient({
             <CampaignShareMenu slug={slug} title={campaign.title} />
           </div>
           <StatusLine status={campaign.status} />
+          {campaign.author ? (
+            <div className="mt-4 space-y-2 text-sm text-amber-950/75">
+              <p>
+                <span className="font-medium text-amber-950/55">Creator</span>{' '}
+                <Link
+                  href={`/users/${encodeURIComponent(campaign.author.id)}`}
+                  className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
+                >
+                  {campaign.author.fullName}
+                </Link>
+              </p>
+              {campaign.author.organization ? (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-medium text-amber-950/55">Organization</span>
+                  <Link
+                    href={`/organizations/${encodeURIComponent(campaign.author.organization.slug)}`}
+                    className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
+                  >
+                    {campaign.author.organization.name}
+                  </Link>
+                  <OrganizationVerifiedBadge compact />
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <p className="mt-5 text-lg leading-relaxed text-amber-950/85">{campaign.description}</p>
           <div className="mt-8 rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -338,7 +364,13 @@ export function CampaignPageClient({
 
         <aside className="space-y-8 lg:pt-2">
           {api && campaign && canShowDonateWidget(campaign) ? (
-            <CampaignPaymongoDonate slug={slug} api={api} onPaid={onDonateSuccess} />
+            <CampaignPaymongoDonate
+              slug={slug}
+              api={api}
+              campaignTitle={campaign.title}
+              campaignDescription={campaign.description}
+              onPaid={onDonateSuccess}
+            />
           ) : null}
           <section>
             <h2 className="text-xl font-bold text-amber-950">Recent donors</h2>

@@ -20,6 +20,7 @@ export interface Campaign {
   recipientNote: string;
   /** Present when API includes author (e.g. public list). */
   author?: {
+    id: string;
     fullName: string;
     organization: { name: string; slug: string } | null;
   };

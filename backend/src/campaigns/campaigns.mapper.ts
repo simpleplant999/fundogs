@@ -23,6 +23,7 @@ export type ApiCampaign = {
   recipientNote: string;
   /** Present when API includes author relation */
   author?: {
+    id: string;
     fullName: string;
     organization: { name: string; slug: string } | null;
   };
@@ -61,6 +62,7 @@ function galleryUrls(c: Campaign): string[] {
 
 type CampaignWithAuthorOpt = Campaign & {
   author?: {
+    id: string;
     fullName: string;
     organization: { name: string; slug: string } | null;
   } | null;
@@ -71,6 +73,7 @@ export function mapCampaign(c: CampaignWithAuthorOpt): ApiCampaign {
   const author =
     c.author && typeof c.author === 'object'
       ? {
+          id: c.author.id,
           fullName: c.author.fullName,
           organization: c.author.organization
             ? { name: c.author.organization.name, slug: c.author.organization.slug }

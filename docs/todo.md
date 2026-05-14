@@ -1,4 +1,9 @@
-add organizations campaign on organization profile
-add organization members on organization profile
-add profile picture on the user
-add a profile view on the user
+add organizations campaign on organization profile - DONE
+add organization members on organization profile - DONE
+add profile picture on the user - DONE
+add a profile view on the user - DONE
+
+
+Add Creator and Organization on Campaign View - DONE
+Add description on card payment - DONE
+
