@@ -21,11 +21,11 @@ export default function MyCampaignsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold text-amber-950">My campaigns</h1>
-      <p className="mt-2 max-w-2xl text-sm text-amber-950/75">
+      {/* <p className="mt-2 max-w-2xl text-sm text-amber-950/75">
         Preview any campaign in a modal (with progress toward your goal). Use <strong>Edit</strong> to update
         details. If a campaign was <strong>rejected</strong>, saving changes sends it back to{' '}
         <strong>pending</strong> for admin review.
-      </p>
+      </p> */}
       <Link
         href="/campaigns/new"
         className="mt-6 inline-flex rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800"

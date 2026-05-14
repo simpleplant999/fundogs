@@ -58,9 +58,6 @@ export function SiteFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-amber-800/80 py-4 text-center text-xs text-amber-200/80">
-        Non-profit platform MVP — data shown is illustrative.
-      </div>
     </footer>
   );
 }

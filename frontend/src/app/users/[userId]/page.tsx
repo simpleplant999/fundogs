@@ -110,7 +110,7 @@ export default async function PublicUserProfilePage({
         <div>
           <h2 className="text-lg font-bold text-amber-950">Active campaigns</h2>
           <p className="mt-1 text-sm text-amber-950/65">
-            Live fundraisers (published and approved on FunDogs).
+            Live fundraisers
           </p>
           {activeCampaigns.length === 0 ? (
             <p className="mt-4 rounded-xl border border-dashed border-amber-900/15 bg-amber-50/50 px-4 py-8 text-center text-sm text-amber-950/70">

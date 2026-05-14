@@ -39,34 +39,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <h2 className="text-2xl font-bold text-amber-950">Core areas of the platform</h2>
-        <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            "Register / Login — join the community",
-            "Homepage — stories, impact, and featured drives",
-            "Donate Now — live campaigns with clear goals",
-            "User Profile — your activity and verification status",
-          ].map((item) => (
-            <li
-              key={item}
-              className="rounded-2xl border border-amber-900/10 bg-white px-4 py-3 text-sm leading-relaxed text-amber-950/85 shadow-sm"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <section className="border-y border-amber-900/10 bg-white/80">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-amber-950">Fundraising campaigns</h2>
-              <p className="mt-2 max-w-xl text-amber-950/75">
-                Each campaign shows an image, title, description, goal, funds raised, and status (Published /
-                Draft / Archived / Done).
-              </p>
             </div>
             <Link href="/donate" className="text-sm font-semibold text-teal-800 hover:underline">
               Browse all campaigns →
