@@ -22,9 +22,19 @@ function StatusChip({ status }: { status: Campaign["status"] }) {
   );
 }
 
-export function CampaignCard({ campaign }: { campaign: Campaign }) {
+export function CampaignCard({
+  campaign,
+  equalHeight = false,
+}: {
+  campaign: Campaign;
+  equalHeight?: boolean;
+}) {
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm shadow-amber-900/5 transition hover:shadow-md">
+    <article
+      className={`flex flex-col overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm shadow-amber-900/5 transition hover:shadow-md${
+        equalHeight ? ' h-full' : ''
+      }`}
+    >
       <Link href={`/campaigns/${campaign.slug}`} className="relative block aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-amber-100">
         {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary campaign image hosts */}
         <img
@@ -38,7 +48,11 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
           <StatusChip status={campaign.status} />
         </div>
         <Link href={`/campaigns/${campaign.slug}`}>
-          <h2 className="text-lg font-semibold leading-snug text-amber-950 hover:underline">
+          <h2
+            className={`text-lg font-semibold leading-snug text-amber-950 hover:underline${
+              equalHeight ? ' line-clamp-2' : ''
+            }`}
+          >
             {campaign.title}
           </h2>
         </Link>
@@ -66,23 +80,47 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
             ) : null}
           </div>
         ) : null}
-        <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
-        <div className="mt-auto flex items-end justify-between gap-2 text-sm">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-amber-950/55">Raised</p>
-            <p className="font-semibold text-teal-800">{formatPhp(campaign.raisedAmount)}</p>
+        {equalHeight ? (
+          <div className="mt-auto flex flex-col gap-3">
+            <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
+            <div className="flex items-end justify-between gap-2 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Raised</p>
+                <p className="font-semibold text-teal-800">{formatPhp(campaign.raisedAmount)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Goal</p>
+                <p className="font-medium text-amber-950">{formatPhp(campaign.goalAmount)}</p>
+              </div>
+            </div>
+            <Link
+              href={`/campaigns/${campaign.slug}`}
+              className="inline-flex justify-center rounded-full bg-amber-950 px-4 py-2 text-center text-sm font-medium text-amber-50 transition hover:bg-amber-900"
+            >
+              View campaign
+            </Link>
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-amber-950/55">Goal</p>
-            <p className="font-medium text-amber-950">{formatPhp(campaign.goalAmount)}</p>
-          </div>
-        </div>
-        <Link
-          href={`/campaigns/${campaign.slug}`}
-          className="inline-flex justify-center rounded-full bg-amber-950 px-4 py-2 text-center text-sm font-medium text-amber-50 transition hover:bg-amber-900"
-        >
-          View campaign
-        </Link>
+        ) : (
+          <>
+            <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
+            <div className="mt-auto flex items-end justify-between gap-2 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Raised</p>
+                <p className="font-semibold text-teal-800">{formatPhp(campaign.raisedAmount)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Goal</p>
+                <p className="font-medium text-amber-950">{formatPhp(campaign.goalAmount)}</p>
+              </div>
+            </div>
+            <Link
+              href={`/campaigns/${campaign.slug}`}
+              className="inline-flex justify-center rounded-full bg-amber-950 px-4 py-2 text-center text-sm font-medium text-amber-50 transition hover:bg-amber-900"
+            >
+              View campaign
+            </Link>
+          </>
+        )}
       </div>
     </article>
   );
