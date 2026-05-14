@@ -107,9 +107,6 @@ export default function RegisterPage() {
           Log in
         </Link>
       </p>
-      <p className="mt-4 text-center text-xs text-amber-950/55">
-        API: <span className="font-mono">{getClientApiBase() || 'not set'}</span>
-      </p>
     </div>
   );
 }

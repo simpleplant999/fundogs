@@ -31,9 +31,6 @@ export default function LoginPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-14 sm:px-6">
       <h1 className="text-3xl font-bold text-amber-950">Log in</h1>
-      <p className="mt-2 text-sm text-amber-950/75">
-        API: <span className="font-mono text-xs">{getClientApiBase() || '(set NEXT_PUBLIC_API_URL)'}</span>
-      </p>
       <form onSubmit={onSubmit} className="mt-8 space-y-4 rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm">
         <label className="block text-sm font-medium text-amber-950">
           Email

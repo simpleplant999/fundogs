@@ -4,6 +4,17 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
+function parseAllowedOrigins(raw: string | undefined): string[] {
+  const fromEnv = raw
+    ? raw
+        .split(',')
+        .map((s) => s.trim().replace(/\/+$/, ''))
+        .filter(Boolean)
+    : [];
+  if (fromEnv.length) return fromEnv;
+  return ['http://localhost:3000', 'http://127.0.0.1:3000'];
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
@@ -20,11 +31,16 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  const origins = process.env.FRONTEND_ORIGIN
-    ? process.env.FRONTEND_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
-    : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+  const allowedOrigins = parseAllowedOrigins(process.env.FRONTEND_ORIGIN);
   app.enableCors({
-    origin: origins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const normalized = origin.replace(/\/+$/, '');
+      callback(null, allowedOrigins.includes(normalized));
+    },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
