@@ -5,6 +5,7 @@ import type { StripeElementsOptions } from '@stripe/stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { donorDisplayNameFromFullName, isDonorDisplayNameReady, resolveDonorDisplayName } from '@/lib/donor-display-name';
+import { formatGoalAmountDisplay, parseGoalAmountInput } from '@/lib/goal-amount-input';
 import { useAuth } from '@/providers/auth-provider';
 import { ToggleSwitch } from '@/components/toggle-switch';
 
@@ -139,7 +140,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
 
   async function createPaymentIntent() {
     setError(null);
-    const amt = Number(amount);
+    const amt = parseGoalAmountInput(amount);
     if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setError('Enter the name to show with your gift.');
       return;
@@ -179,7 +180,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
 
   async function startCheckoutRedirect() {
     setError(null);
-    const amt = Number(amount);
+    const amt = parseGoalAmountInput(amount);
     if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setError('Enter the name to show with your gift.');
       return;
@@ -218,7 +219,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
   }
 
   const handlePaid = useCallback(() => {
-    const amt = Number(amount);
+    const amt = parseGoalAmountInput(amount);
     if (Number.isFinite(amt) && amt >= 1) {
       onSuccess({ amountAddedPhp: amt });
     } else {
@@ -260,11 +261,10 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
         <label className="block text-sm font-medium text-amber-950">
           Amount (PHP)
           <input
-            type="number"
-            min={1}
-            step={1}
+            type="text"
+            inputMode="numeric"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(formatGoalAmountDisplay(e.target.value))}
             disabled={!!clientSecret}
             className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
             placeholder="500"
