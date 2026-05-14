@@ -68,6 +68,7 @@ export class OrganizationsService {
       include: {
         author: {
           select: {
+            id: true,
             fullName: true,
             organization: { select: { name: true, slug: true } },
           },

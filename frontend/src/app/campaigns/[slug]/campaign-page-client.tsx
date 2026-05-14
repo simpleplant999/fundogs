@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
 import { CampaignShareMenu } from '@/components/campaign-share-menu';
 import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
@@ -319,18 +320,16 @@ export function CampaignPageClient({
             <CampaignShareMenu slug={slug} title={campaign.title} />
           </div>
           <StatusLine status={campaign.status} />
-          {campaign.author ? (
+          {(campaign.author || campaign.authorId) ? (
             <div className="mt-4 space-y-2 text-sm text-amber-950/75">
               <p>
                 <span className="font-medium text-amber-950/55">Creator</span>{' '}
-                <Link
-                  href={`/users/${encodeURIComponent(campaign.author.id)}`}
+                <CampaignAuthorProfileLink
+                  campaign={campaign}
                   className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
-                >
-                  {campaign.author.fullName}
-                </Link>
+                />
               </p>
-              {campaign.author.organization ? (
+              {campaign.author?.organization ? (
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="font-medium text-amber-950/55">Organization</span>
                   <Link
@@ -374,9 +373,6 @@ export function CampaignPageClient({
           ) : null}
           <section>
             <h2 className="text-xl font-bold text-amber-950">Recent donors</h2>
-            <p className="mt-1 text-sm text-amber-950/70">
-              Verified PayMongo and other confirmed gifts appear here; pending pledges may take longer to show.
-            </p>
             <div className="mt-4">
               <DonorsList donors={donors} />
             </div>

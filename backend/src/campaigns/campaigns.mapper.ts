@@ -21,6 +21,7 @@ export type ApiCampaign = {
   approvalStatus: 'pending' | 'approved' | 'rejected';
   recipientName: string;
   recipientNote: string;
+  authorId: string;
   /** Present when API includes author relation */
   author?: {
     id: string;
@@ -62,7 +63,7 @@ function galleryUrls(c: Campaign): string[] {
 
 type CampaignWithAuthorOpt = Campaign & {
   author?: {
-    id: string;
+    id?: string;
     fullName: string;
     organization: { name: string; slug: string } | null;
   } | null;
@@ -73,7 +74,7 @@ export function mapCampaign(c: CampaignWithAuthorOpt): ApiCampaign {
   const author =
     c.author && typeof c.author === 'object'
       ? {
-          id: c.author.id,
+          id: c.author.id ?? c.authorId,
           fullName: c.author.fullName,
           organization: c.author.organization
             ? { name: c.author.organization.name, slug: c.author.organization.slug }
@@ -93,6 +94,7 @@ export function mapCampaign(c: CampaignWithAuthorOpt): ApiCampaign {
     approvalStatus: c.approvalStatus.toLowerCase() as ApiCampaign['approvalStatus'],
     recipientName: c.recipientName,
     recipientNote: c.recipientNote,
+    authorId: c.authorId,
     ...(author ? { author } : {}),
   };
 }

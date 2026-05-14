@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Campaign } from "@/lib/types";
 import { getCampaignImages } from "@/lib/campaign-images";
 import { OrganizationVerifiedBadge } from "@/components/organization-verified-badge";
+import { CampaignAuthorProfileLink } from "@/components/campaign-author-profile-link";
 import { formatPhp } from "@/lib/format-currency";
 import { ProgressBar } from "./progress-bar";
 
@@ -42,12 +43,15 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
           </h2>
         </Link>
         <p className="line-clamp-2 text-sm text-amber-950/75">{campaign.description}</p>
-        {campaign.author ? (
+        {campaign.author || campaign.authorId ? (
           <div className="text-xs leading-relaxed text-amber-950/70">
             <p>
-              <span className="text-amber-950/85">{campaign.author.fullName}</span>
+              <CampaignAuthorProfileLink
+                campaign={campaign}
+                className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
+              />
             </p>
-            {campaign.author.organization ? (
+            {campaign.author?.organization ? (
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="inline-flex flex-wrap items-center gap-2">
                   <Link

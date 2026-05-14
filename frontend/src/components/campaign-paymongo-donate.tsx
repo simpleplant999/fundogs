@@ -276,10 +276,12 @@ export function CampaignPaymongoDonate({
     const nm = name.trim();
     if (!nm) {
       setErr('Enter the name to show with your gift.');
+      setPaymongoFlow(null);
       return;
     }
     if (!Number.isFinite(amt) || amt < 20) {
       setErr('Enter amount PHP 20 or more (PayMongo QR Ph minimum).');
+      setPaymongoFlow(null);
       return;
     }
     amountRef.current = amt;
@@ -301,10 +303,12 @@ export function CampaignPaymongoDonate({
       };
       if (!res.ok) {
         setErr(parseApiError(data));
+        setPaymongoFlow(null);
         return;
       }
       if (!data.qrImageUrl || !data.paymentIntentId) {
         setErr('PayMongo did not return QR data.');
+        setPaymongoFlow(null);
         return;
       }
       setShowSuccess(false);
@@ -458,6 +462,10 @@ export function CampaignPaymongoDonate({
     );
   }
 
+  const parsedAmount = Number(amount);
+  const canChooseDonationMethod =
+    name.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount >= 20;
+
   return (
     <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-bold text-amber-950">Donate with PayMongo</h2>
@@ -507,10 +515,11 @@ export function CampaignPaymongoDonate({
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !canChooseDonationMethod}
               onClick={() => {
                 setErr(null);
                 setPaymongoFlow('qr');
+                void startQr();
               }}
               className="flex flex-col items-start rounded-xl border border-amber-900/15 bg-amber-50/50 px-4 py-3 text-left transition hover:border-amber-900/30 hover:bg-amber-50 disabled:opacity-60"
             >
@@ -519,7 +528,7 @@ export function CampaignPaymongoDonate({
             </button>
             <button
                 type="button"
-                disabled={busy}
+                disabled={busy || !canChooseDonationMethod}
                 onClick={() => {
                   setErr(null);
                   setPaymongoFlow('card');
@@ -546,18 +555,13 @@ export function CampaignPaymongoDonate({
           </button>
 
           {paymongoFlow === 'qr' ? (
-            <div>
-              <p className="text-xs text-amber-950/70">
-                We will show a QR code to scan. Minimum PHP 20. You can switch your donation method above if you change your mind.
+            <div className="rounded-xl border border-amber-900/10 bg-amber-50/40 p-4">
+              <p className="text-sm font-medium text-amber-950">Scan with your bank or e-wallet (QR Ph)</p>
+              <p className="mt-1 text-xs text-amber-950/70">
+                {busy
+                  ? 'Creating your QR code…'
+                  : 'This screen will switch to a thank-you message as soon as your donation is confirmed.'}
               </p>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void startQr()}
-                className="mt-3 w-full rounded-full bg-amber-900 px-4 py-2.5 text-sm font-semibold text-amber-50 hover:bg-amber-950 disabled:opacity-60"
-              >
-                {busy ? 'Creating QR…' : 'Show QR Ph to donate'}
-              </button>
             </div>
           ) : (
             <div className="rounded-xl border border-teal-700/20 bg-teal-50/35 p-4">
