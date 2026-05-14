@@ -191,11 +191,6 @@ function isPaymongoPaid(data: SyncPaymongoResponse): boolean {
 /** PayMongo QR Ph (GCash, Maya, …) plus optional sandbox test card when `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY` is `pk_test_`. */
 export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
   const paymongoPk = (process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY ?? '').trim();
-  const showTestCard = PAYMONGO_TEST_PK_PATTERN.test(paymongoPk);
-  const paymongoPkMisconfigured =
-    paymongoPk.length > 0 &&
-    (!PAYMONGO_PUBLISHABLE_KEY_PATTERN.test(paymongoPk) || paymongoKeyLooksLikeIntentClientKey(paymongoPk));
-
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [email, setEmail] = useState('');
@@ -313,8 +308,7 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
     }
   }
 
-  async function donateWithTestCard() {
-    if (!showTestCard) return;
+  async function donateWithCard() {
     setErr(null);
     const amt = Number(amount);
     const nm = name.trim();
@@ -462,6 +456,7 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
       <p className="mt-1 text-xs text-amber-950/65">
         Enter your details, then choose how to donate: QR Ph or a card. Minimum PHP 20.
       </p>
+
       <div className="mt-3 space-y-2">
         <label className="block text-sm font-medium text-amber-950">
           Name (shown publicly)
@@ -514,8 +509,7 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
               <span className="text-sm font-semibold text-amber-950">QR Ph</span>
               <span className="mt-1 text-xs text-amber-950/70">GCash, Maya, and other QR Ph apps</span>
             </button>
-            {showTestCard ? (
-              <button
+            <button
                 type="button"
                 disabled={busy}
                 onClick={() => {
@@ -524,19 +518,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
                 }}
                 className="flex flex-col items-start rounded-xl border border-teal-700/25 bg-teal-50/50 px-4 py-3 text-left transition hover:border-teal-700/40 hover:bg-teal-50/80 disabled:opacity-60"
               >
-                <span className="text-sm font-semibold text-teal-950">Test card</span>
-                <span className="mt-1 text-xs text-teal-900/75">Sandbox only (PayMongo test Visa)</span>
+                <span className="text-sm font-semibold text-teal-950">Card</span>
               </button>
-            ) : (
-              <div className="rounded-xl border border-dashed border-amber-900/20 bg-amber-50/30 px-4 py-3 text-xs text-amber-950/65">
-                <p className="font-medium text-amber-950/85">Card (sandbox)</p>
-                <p className="mt-1">
-                  Add <code className="rounded bg-amber-100/80 px-1">NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY=pk_test_…</code> to{' '}
-                  <code className="rounded bg-amber-100/80 px-1">.env.local</code> and restart the dev server to enable test
-                  cards.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       ) : (
@@ -569,12 +552,8 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
             </div>
           ) : (
             <div className="rounded-xl border border-teal-700/20 bg-teal-50/35 p-4">
-              <h3 className="text-sm font-semibold text-teal-950">Sandbox test card</h3>
+              <h3 className="text-sm font-semibold text-teal-950">Card</h3>
               <p className="mt-1 text-xs text-teal-900/75">
-                Card data is sent only to PayMongo from your browser. Server uses{' '}
-                <code className="rounded bg-teal-100/80 px-1">sk_test_</code>; this page uses{' '}
-                <code className="rounded bg-teal-100/80 px-1">pk_test_</code>.
-              </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-teal-950 sm:col-span-2">
                   Card number
@@ -621,10 +600,10 @@ export function CampaignPaymongoDonate({ slug, api, onPaid }: Props) {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void donateWithTestCard()}
+                onClick={() => void donateWithCard()}
                 className="mt-4 w-full rounded-full bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
               >
-                {busy ? 'Processing…' : 'Donate with test card'}
+                {busy ? 'Processing…' : 'Donate with card'}
               </button>
             </div>
           )}
