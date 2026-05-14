@@ -1,0 +1,6 @@
+- Add organizations campaign on organization profile 
+- Add organization members on organization profile
+- Add profile picture on the user
+- Add a profile view on the user
+- Add Creator and Organization on Campaign View 
+- Add description on card payment 
