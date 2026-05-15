@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -16,6 +17,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { CreateCampaignUpdateDto } from './dto/create-campaign-update.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateDonationCheckoutDto } from './dto/create-donation-checkout.dto';
 import { CreateDonationDto } from './dto/create-donation.dto';
@@ -24,6 +26,9 @@ import { SyncStripeCheckoutDto } from './dto/sync-stripe-checkout.dto';
 import { SyncStripePaymentIntentDto } from './dto/sync-stripe-payment-intent.dto';
 import { SyncPaymongoIntentDto } from './dto/sync-paymongo-intent.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import { UpsertCampaignBankAccountDto } from '../withdrawals/dto/upsert-campaign-bank-account.dto';
+import { CreateWithdrawalRequestDto } from '../withdrawals/dto/create-withdrawal-request.dto';
+import { WithdrawalsService } from '../withdrawals/withdrawals.service';
 import { OptionalJwtGuard } from '../auth/guards/optional-jwt.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtUserPayload } from '../auth/jwt.strategy';
@@ -35,7 +40,10 @@ import {
 
 @Controller('campaigns')
 export class CampaignsController {
-  constructor(private readonly campaigns: CampaignsService) {}
+  constructor(
+    private readonly campaigns: CampaignsService,
+    private readonly withdrawals: WithdrawalsService,
+  ) {}
 
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
@@ -51,6 +59,62 @@ export class CampaignsController {
     @Body() dto: UpdateCampaignDto,
   ) {
     return this.campaigns.updateMine(user.sub, id, dto);
+  }
+
+  @Get('me/:id/bank-account')
+  @UseGuards(AuthGuard('jwt'))
+  getMyBankAccount(@CurrentUser() user: JwtUserPayload, @Param('id') id: string) {
+    return this.withdrawals.getCreatorBankAccount(user.sub, id);
+  }
+
+  @Patch('me/:id/bank-account')
+  @UseGuards(AuthGuard('jwt'))
+  upsertMyBankAccount(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() dto: UpsertCampaignBankAccountDto,
+  ) {
+    return this.withdrawals.upsertCreatorBankAccount(user.sub, id, dto);
+  }
+
+  @Get('me/:id/withdrawals')
+  @UseGuards(AuthGuard('jwt'))
+  listMyWithdrawals(@CurrentUser() user: JwtUserPayload, @Param('id') id: string) {
+    return this.withdrawals.listCreatorWithdrawals(user.sub, id);
+  }
+
+  @Post('me/:id/withdrawals')
+  @UseGuards(AuthGuard('jwt'))
+  createMyWithdrawal(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateWithdrawalRequestDto,
+  ) {
+    return this.withdrawals.createCreatorWithdrawal(user.sub, id, dto);
+  }
+
+  @Post('me/:id/updates')
+  @UseGuards(AuthGuard('jwt'))
+  createMyUpdate(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateCampaignUpdateDto,
+  ) {
+    return this.campaigns.createCampaignUpdate(user.sub, id, {
+      title: dto.title,
+      body: dto.body,
+      imageUrls: dto.imageUrls,
+    });
+  }
+
+  @Delete('me/:id/updates/:updateId')
+  @UseGuards(AuthGuard('jwt'))
+  deleteMyUpdate(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Param('updateId') updateId: string,
+  ) {
+    return this.campaigns.deleteCampaignUpdate(user.sub, user.role, id, updateId);
   }
 
   @Post()
@@ -89,6 +153,12 @@ export class CampaignsController {
   @Get()
   list() {
     return this.campaigns.listPublic();
+  }
+
+  @Get(':slug/updates')
+  @UseGuards(OptionalJwtGuard)
+  listUpdates(@Param('slug') slug: string, @Req() req: Request & { user?: JwtUserPayload }) {
+    return this.campaigns.getCampaignUpdates(slug, req.user);
   }
 
   @Get(':slug')
@@ -162,6 +232,7 @@ export class CampaignsController {
       trackingNumber: dto.trackingNumber,
       branch: dto.branch,
       fundraisingReference: dto.fundraisingReference,
+      hideAmount: dto.hideAmount,
     });
   }
 }

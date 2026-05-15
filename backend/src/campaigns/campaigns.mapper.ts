@@ -1,6 +1,7 @@
 import type {
   Campaign,
   CampaignLifecycleStatus,
+  CampaignUpdate,
   Comment,
   Donation,
   User,
@@ -41,9 +42,20 @@ export type ApiComment = {
 export type ApiDonor = {
   id: string;
   name: string;
-  amount: number;
+  /** Null when the donor asked to hide the amount on the public list (still counted in campaign total). */
+  amount: number | null;
+  hideAmount: boolean;
   verification: 'verified' | 'pending' | 'rejected';
   date: string;
+};
+
+export type ApiCampaignUpdate = {
+  id: string;
+  title: string;
+  body: string;
+  /** Gallery images attached to this update (0–6). */
+  images: string[];
+  createdAt: string;
 };
 
 function lifecycleToStatus(s: CampaignLifecycleStatus): ApiCampaign['status'] {
@@ -110,12 +122,27 @@ export function mapComment(c: Comment & { author?: User | null }): ApiComment {
   };
 }
 
+export function mapCampaignUpdate(row: CampaignUpdate): ApiCampaignUpdate {
+  /** After `prisma generate`, `imageUrls` is on {@link CampaignUpdate}; cast supports stale client during Windows EPERM locks. */
+  const imgs = (row as CampaignUpdate & { imageUrls?: string[] }).imageUrls;
+  const images = imgs?.length ? [...imgs] : [];
+  return {
+    id: row.id,
+    title: row.title.trim(),
+    body: row.body,
+    images,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
 export function mapDonation(d: Donation): ApiDonor {
   const v = d.verificationStatus.toLowerCase() as ApiDonor['verification'];
+  const hide = d.hideAmountPublic;
   return {
     id: d.id,
     name: d.donorDisplayName,
-    amount: d.amount,
+    amount: hide ? null : d.amount,
+    hideAmount: hide,
     verification: v === 'verified' ? 'verified' : v === 'rejected' ? 'rejected' : 'pending',
     date: d.createdAt.toISOString(),
   };

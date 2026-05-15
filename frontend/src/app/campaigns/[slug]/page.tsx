@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { CampaignViewSkeleton } from '@/components/page-skeletons';
 import { CampaignPageClient } from './campaign-page-client';
 
 function firstQuery(v: string | string[] | undefined): string | null {
@@ -24,11 +25,7 @@ export default async function CampaignPage({
   const initialPaymentIntentId = firstQuery(sp.payment_intent);
 
   return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center text-amber-950/80 sm:px-6">Loading campaign…</div>
-      }
-    >
+    <Suspense fallback={<CampaignViewSkeleton />}>
       <CampaignPageClient
         slug={slug}
         initialDonated={initialDonated}

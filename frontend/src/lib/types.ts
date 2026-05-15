@@ -32,7 +32,10 @@ export interface Campaign {
 export interface Donor {
   id: string;
   name: string;
-  amount: number;
+  /** Null when the donor chose to hide the amount on the public list. */
+  amount: number | null;
+  /** When true, the public donor list shows a masked amount instead of PHP. */
+  hideAmount?: boolean;
   verification: DonationVerification;
   date: string;
 }
@@ -42,5 +45,14 @@ export interface Comment {
   author: string;
   body: string;
   status: "visible" | "pending" | "rejected";
+  createdAt: string;
+}
+
+export interface CampaignUpdate {
+  id: string;
+  title: string;
+  body: string;
+  /** Image URLs from the server (may be empty). */
+  images: string[];
   createdAt: string;
 }

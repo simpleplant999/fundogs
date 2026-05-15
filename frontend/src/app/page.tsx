@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const published = await loadPublishedCampaigns();
-  const featured = published.slice(0, 2);
+  const featured = published.slice(0, 6);
 
   return (
     <div>
@@ -49,7 +49,7 @@ export default async function HomePage() {
               Browse all campaigns →
             </Link>
           </div>
-          <div className="mt-10 grid gap-8 md:grid-cols-2">
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((c) => (
               <CampaignCard key={c.id} campaign={c} />
             ))}

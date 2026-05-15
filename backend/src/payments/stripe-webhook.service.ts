@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
+import { parseHideAmountPublicMetadata } from '../campaigns/donation-hide-amount.util';
 
 @Injectable()
 export class StripeWebhookService {
@@ -50,6 +51,7 @@ export class StripeWebhookService {
       return;
     }
     const donorName = (pi.metadata?.donor_display_name || 'Supporter').trim().slice(0, 120);
+    const hideAmountPublic = parseHideAmountPublicMetadata(pi.metadata?.hide_amount_public);
     if (pi.amount == null) return;
     const amountPhp = pi.amount / 100;
 
@@ -90,6 +92,7 @@ export class StripeWebhookService {
           branch: 'stripe-element',
           fundraisingReference: pi.id,
           verificationStatus: DonationVerificationStatus.VERIFIED,
+          hideAmountPublic,
           createdAt: new Date(eventCreatedSec * 1000),
         },
       });
@@ -115,6 +118,16 @@ export class StripeWebhookService {
       return;
     }
     const donorName = (session.metadata?.donor_display_name || 'Supporter').trim().slice(0, 120);
+    const hideFromSession = parseHideAmountPublicMetadata(session.metadata?.hide_amount_public);
+    const expandedPi = session.payment_intent;
+    const hideFromPi =
+      typeof expandedPi === 'object' &&
+      expandedPi &&
+      'metadata' in expandedPi &&
+      !('deleted' in expandedPi)
+        ? parseHideAmountPublicMetadata((expandedPi as Stripe.PaymentIntent).metadata?.hide_amount_public)
+        : false;
+    const hideAmountPublic = hideFromSession || hideFromPi;
     const amountTotal = session.amount_total;
     if (amountTotal == null) {
       this.log.error(`checkout.session.completed missing amount_total: ${session.id}`);
@@ -176,6 +189,7 @@ export class StripeWebhookService {
           branch: 'stripe',
           fundraisingReference: piId || session.id,
           verificationStatus: DonationVerificationStatus.VERIFIED,
+          hideAmountPublic,
           createdAt: new Date(eventCreatedSec * 1000),
         },
       });

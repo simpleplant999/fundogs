@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsEmail, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsEmail, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreatePaymongoQrDto {
   @IsString()
@@ -24,4 +24,9 @@ export class CreatePaymongoQrDto {
   @MinLength(10)
   @MaxLength(20)
   billingPhone?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === 1 || value === '1')
+  @IsBoolean()
+  hideAmount?: boolean;
 }

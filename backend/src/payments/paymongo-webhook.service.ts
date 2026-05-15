@@ -13,6 +13,7 @@ import {
 import { createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymongoService, type PaymongoPaymentIntentAttrs } from './paymongo.service';
+import { parseHideAmountPublicMetadata } from '../campaigns/donation-hide-amount.util';
 
 function timingSafeEqualAscii(a: string, b: string): boolean {
   const ba = Buffer.from(a, 'utf8');
@@ -145,6 +146,7 @@ export class PaymongoWebhookService {
       return 'skipped';
     }
     const donorName = (attrs.metadata?.donor_display_name || 'Supporter').trim().slice(0, 120);
+    const hideAmountPublic = parseHideAmountPublicMetadata(attrs.metadata?.hide_amount_public);
 
     const createdAt = paidAt ?? new Date();
 
@@ -176,6 +178,7 @@ export class PaymongoWebhookService {
           branch: attrs.metadata?.donation_channel === 'card' ? 'card' : 'qrph',
           fundraisingReference: paymentIntentId,
           verificationStatus: DonationVerificationStatus.VERIFIED,
+          hideAmountPublic,
           createdAt,
         },
       });

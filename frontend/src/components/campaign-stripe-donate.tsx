@@ -3,7 +3,11 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import type { StripeElementsOptions } from '@stripe/stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { donorDisplayNameFromFullName, isDonorDisplayNameReady, resolveDonorDisplayName } from '@/lib/donor-display-name';
+import { formatGoalAmountDisplay, parseGoalAmountInput } from '@/lib/goal-amount-input';
+import { useAuth } from '@/providers/auth-provider';
+import { ToggleSwitch } from '@/components/toggle-switch';
 
 type Props = {
   slug: string;
@@ -106,11 +110,21 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
     [publishableKey],
   );
 
+  const { user, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
+  const [donateAnonymously, setDonateAnonymously] = useState(false);
+  const [hideDonationAmount, setHideDonationAmount] = useState(false);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading || donateAnonymously) return;
+    const fromProfile = user?.fullName ? donorDisplayNameFromFullName(user.fullName) : '';
+    if (!fromProfile) return;
+    setName((current) => (current.trim() ? current : fromProfile));
+  }, [authLoading, user?.fullName, donateAnonymously]);
 
   const elementsOptions: StripeElementsOptions | undefined = clientSecret
     ? {
@@ -127,8 +141,8 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
 
   async function createPaymentIntent() {
     setError(null);
-    const amt = Number(amount);
-    if (!name.trim()) {
+    const amt = parseGoalAmountInput(amount);
+    if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setError('Enter the name to show with your gift.');
       return;
     }
@@ -142,8 +156,9 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          donorDisplayName: name.trim(),
+          donorDisplayName: resolveDonorDisplayName(name, donateAnonymously),
           amount: amt,
+          hideAmount: hideDonationAmount,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { clientSecret?: string };
@@ -167,8 +182,8 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
 
   async function startCheckoutRedirect() {
     setError(null);
-    const amt = Number(amount);
-    if (!name.trim()) {
+    const amt = parseGoalAmountInput(amount);
+    if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setError('Enter the name to show with your gift.');
       return;
     }
@@ -182,8 +197,9 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          donorDisplayName: name.trim(),
+          donorDisplayName: resolveDonorDisplayName(name, donateAnonymously),
           amount: amt,
+          hideAmount: hideDonationAmount,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string };
@@ -206,7 +222,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
   }
 
   const handlePaid = useCallback(() => {
-    const amt = Number(amount);
+    const amt = parseGoalAmountInput(amount);
     if (Number.isFinite(amt) && amt >= 1) {
       onSuccess({ amountAddedPhp: amt });
     } else {
@@ -224,25 +240,42 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
       </p>
 
       <div className="mt-4 space-y-3">
-        <label className="block text-sm font-medium text-amber-950">
-          Name (shown publicly)
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-            disabled={!!clientSecret}
-            className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
-            placeholder="e.g. Alex M."
-          />
-        </label>
+        <ToggleSwitch
+          id="stripe-donate-anonymously"
+          label="Donate anonymously"
+          description="Your gift will appear as Anonymous on the donor list."
+          checked={donateAnonymously}
+          onCheckedChange={setDonateAnonymously}
+          disabled={!!clientSecret || busy}
+        />
+        <ToggleSwitch
+          id="stripe-donate-hide-amount"
+          label="Hide donation amount"
+          description="Show ***** instead of the amount on the public donor list. Your gift still counts toward the goal."
+          checked={hideDonationAmount}
+          onCheckedChange={setHideDonationAmount}
+          disabled={!!clientSecret || busy}
+        />
+        {!donateAnonymously ? (
+          <label className="block text-sm font-medium text-amber-950">
+            Name (shown publicly)
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              disabled={!!clientSecret}
+              className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
+              placeholder="e.g. Alex M."
+            />
+          </label>
+        ) : null}
         <label className="block text-sm font-medium text-amber-950">
           Amount (PHP)
           <input
-            type="number"
-            min={1}
-            step={1}
+            type="text"
+            inputMode="numeric"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(formatGoalAmountDisplay(e.target.value))}
             disabled={!!clientSecret}
             className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
             placeholder="500"

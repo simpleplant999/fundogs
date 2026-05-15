@@ -1,18 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { digitsFromCardInput, formatCardNumberDisplay } from '@/lib/card-number-input';
+import { donorDisplayNameFromFullName, isDonorDisplayNameReady, resolveDonorDisplayName } from '@/lib/donor-display-name';
+import { formatGoalAmountDisplay, parseGoalAmountInput } from '@/lib/goal-amount-input';
+import { useAuth } from '@/providers/auth-provider';
+import { formatPaymongoClientErrors } from '@/lib/paymongo-errors';
+import { ToggleSwitch } from '@/components/toggle-switch';
 
 const PAYMONGO_API = 'https://api.paymongo.com/v1';
 
 function basicAuth(key: string): string {
   return btoa(`${key}:`);
-}
-
-function parsePaymongoClientErrors(json: unknown): string {
-  const err = json as { errors?: Array<{ detail?: string }> };
-  const parts = err.errors?.map((e) => e.detail).filter((d): d is string => typeof d === 'string' && d.length > 0);
-  if (parts?.length) return parts.join(' — ');
-  return 'PayMongo request failed';
 }
 
 /** PayMongo expects string PAN/CVC and integer month/year; year is usually 4-digit (YY → 20YY). */
@@ -96,7 +95,7 @@ async function paymongoCreateCardPaymentMethod(
     }),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(parsePaymongoClientErrors(json));
+  if (!res.ok) throw new Error(formatPaymongoClientErrors(json));
   const id = (json as { data?: { id?: string } }).data?.id;
   if (!id) throw new Error('PayMongo did not return a card method id');
   return id;
@@ -129,7 +128,7 @@ async function paymongoAttachPaymentMethod(
     },
   );
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(parsePaymongoClientErrors(json));
+  if (!res.ok) throw new Error(formatPaymongoClientErrors(json));
 }
 
 const PAYMONGO_TEST_PK_PATTERN = /^pk_test/;
@@ -194,6 +193,11 @@ function isPaymongoPaid(data: SyncPaymongoResponse): boolean {
   return Boolean(data.recorded || data.alreadyRecorded || st === 'succeeded');
 }
 
+function isPaymongoFailed(data: SyncPaymongoResponse): boolean {
+  const st = (data.status ?? '').toLowerCase();
+  return st === 'failed' || st === 'payment_failed' || st === 'cancelled';
+}
+
 /** PayMongo QR Ph (GCash, Maya, …) plus optional sandbox test card when `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY` is `pk_test_`. */
 export function CampaignPaymongoDonate({
   scope = 'campaign',
@@ -211,7 +215,10 @@ export function CampaignPaymongoDonate({
       ? `${api}/support/donations`
       : `${api}/campaigns/${encodeURIComponent(slug ?? '')}/donations`;
   const paymongoPk = (process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY ?? '').trim();
+  const { user, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
+  const [donateAnonymously, setDonateAnonymously] = useState(false);
+  const [hideDonationAmount, setHideDonationAmount] = useState(false);
   const [amount, setAmount] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -230,7 +237,16 @@ export function CampaignPaymongoDonate({
   const piRef = useRef<string | null>(null);
   const amountRef = useRef(0);
   const paidNotifiedRef = useRef(false);
+  const cardConfirmingRef = useRef(false);
   piRef.current = piId;
+  cardConfirmingRef.current = cardConfirming;
+
+  useEffect(() => {
+    if (authLoading || donateAnonymously) return;
+    const fromProfile = user?.fullName ? donorDisplayNameFromFullName(user.fullName) : '';
+    if (!fromProfile) return;
+    setName((current) => (current.trim() ? current : fromProfile));
+  }, [authLoading, user?.fullName, donateAnonymously]);
 
   const finishPaid = useCallback(() => {
     if (!paidNotifiedRef.current) {
@@ -246,6 +262,17 @@ export function CampaignPaymongoDonate({
     setShowSuccess(true);
   }, [onPaid]);
 
+  const showCardPaymentError = useCallback((message: string) => {
+    setCardConfirming(false);
+    setShowQr(false);
+    setQrImageUrl(null);
+    setPiId(null);
+    piRef.current = null;
+    setPaymongoFlow('card');
+    setBusy(false);
+    setErr(message);
+  }, []);
+
   const pollOnce = useCallback(async () => {
     const id = piRef.current;
     if (!id) return;
@@ -256,12 +283,25 @@ export function CampaignPaymongoDonate({
         body: JSON.stringify({ paymentIntentId: id }),
       });
       const data = (await res.json().catch(() => ({}))) as SyncPaymongoResponse;
-      if (!res.ok) return;
-      if (isPaymongoPaid(data)) finishPaid();
+      if (!res.ok) {
+        if (cardConfirmingRef.current) {
+          showCardPaymentError(parseApiError(data));
+        }
+        return;
+      }
+      if (isPaymongoPaid(data)) {
+        finishPaid();
+        return;
+      }
+      if (cardConfirmingRef.current && isPaymongoFailed(data)) {
+        showCardPaymentError('Your card payment did not go through. Check your details and try again.');
+      }
     } catch {
-      /* ignore */
+      if (cardConfirmingRef.current) {
+        showCardPaymentError('Could not confirm your card payment. Please try again.');
+      }
     }
-  }, [api, slug, finishPaid]);
+  }, [donationsPath, finishPaid, showCardPaymentError]);
 
   useEffect(() => {
     const polling = (showQr && Boolean(qrImageUrl)) || cardConfirming;
@@ -281,9 +321,9 @@ export function CampaignPaymongoDonate({
 
   async function startQr() {
     setErr(null);
-    const amt = Number(amount);
-    const nm = name.trim();
-    if (!nm) {
+    const amt = parseGoalAmountInput(amount);
+    const nm = resolveDonorDisplayName(name, donateAnonymously);
+    if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setErr('Enter the name to show with your gift.');
       setPaymongoFlow(null);
       return;
@@ -297,7 +337,7 @@ export function CampaignPaymongoDonate({
     paidNotifiedRef.current = false;
     setBusy(true);
     try {
-      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt };
+      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt, hideAmount: hideDonationAmount };
       if (email.trim()) body.billingEmail = email.trim();
       if (phone.trim()) body.billingPhone = phone.trim();
       const res = await fetch(`${donationsPath}/paymongo-qr`, {
@@ -331,14 +371,19 @@ export function CampaignPaymongoDonate({
 
   async function donateWithCard() {
     setErr(null);
-    const amt = Number(amount);
-    const nm = name.trim();
-    if (!nm) {
+    const amt = parseGoalAmountInput(amount);
+    const nm = resolveDonorDisplayName(name, donateAnonymously);
+    if (!isDonorDisplayNameReady(name, donateAnonymously)) {
       setErr('Enter the name to show with your gift.');
       return;
     }
     if (!Number.isFinite(amt) || amt < 20) {
       setErr('Enter amount PHP 20 or more.');
+      return;
+    }
+    const cardDigits = digitsFromCardInput(cardNumber);
+    if (cardDigits.length !== 16) {
+      setErr('Enter a valid 16-digit card number.');
       return;
     }
     let cardDetails: ReturnType<typeof buildPaymongoCardDetails>;
@@ -357,7 +402,7 @@ export function CampaignPaymongoDonate({
     paidNotifiedRef.current = false;
     setBusy(true);
     try {
-      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt };
+      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt, hideAmount: hideDonationAmount };
       if (email.trim()) body.billingEmail = email.trim();
       if (phone.trim()) body.billingPhone = phone.trim();
       const res = await fetch(`${donationsPath}/paymongo-card`, {
@@ -472,9 +517,11 @@ export function CampaignPaymongoDonate({
     );
   }
 
-  const parsedAmount = Number(amount);
+  const parsedAmount = parseGoalAmountInput(amount);
   const canChooseDonationMethod =
-    name.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount >= 20;
+    isDonorDisplayNameReady(name, donateAnonymously) &&
+    Number.isFinite(parsedAmount) &&
+    parsedAmount >= 20;
 
   return (
     <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
@@ -485,23 +532,41 @@ export function CampaignPaymongoDonate({
       </p>
 
       <div className="mt-3 space-y-2">
-        <label className="block text-sm font-medium text-amber-950">
-          Name (shown publicly)
-          <span className="text-rose-700" aria-hidden="true">
-            {' '}
-            *
-          </span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-            disabled={busy}
-            required
-            aria-required="true"
-            className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
-            placeholder="e.g. Alex M."
-          />
-        </label>
+        <ToggleSwitch
+          id="donate-anonymously"
+          label="Donate anonymously"
+          description="Your gift will appear as Anonymous on the donor list."
+          checked={donateAnonymously}
+          onCheckedChange={setDonateAnonymously}
+          disabled={busy}
+        />
+        <ToggleSwitch
+          id="donate-hide-amount"
+          label="Hide donation amount"
+          description="Show ***** instead of the amount on the public donor list. Your gift still counts toward the goal."
+          checked={hideDonationAmount}
+          onCheckedChange={setHideDonationAmount}
+          disabled={busy}
+        />
+        {!donateAnonymously ? (
+          <label className="block text-sm font-medium text-amber-950">
+            Name (shown publicly)
+            <span className="text-rose-700" aria-hidden="true">
+              {' '}
+              *
+            </span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              disabled={busy}
+              required
+              aria-required="true"
+              className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-amber-50/80"
+              placeholder="e.g. Alex M."
+            />
+          </label>
+        ) : null}
         <label className="block text-sm font-medium text-amber-950">
           Amount (PHP, min 20)
           <span className="text-rose-700" aria-hidden="true">
@@ -509,11 +574,10 @@ export function CampaignPaymongoDonate({
             *
           </span>
           <input
-            type="number"
-            min={20}
-            step={1}
+            type="text"
+            inputMode="numeric"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => setAmount(formatGoalAmountDisplay(e.target.value))}
             disabled={busy}
             required
             aria-required="true"
@@ -530,7 +594,11 @@ export function CampaignPaymongoDonate({
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
         </label>
       </div>
-      {err ? <p className="mt-2 text-sm text-red-700">{err}</p> : null}
+      {err && paymongoFlow !== 'card' ? (
+        <p className="mt-2 text-sm text-red-700" role="alert">
+          {err}
+        </p>
+      ) : null}
 
       {paymongoFlow === null ? (
         <div className="mt-5">
@@ -603,10 +671,11 @@ export function CampaignPaymongoDonate({
                   Card number
                   <input
                     value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
+                    onChange={(e) => setCardNumber(formatCardNumberDisplay(e.target.value))}
                     disabled={busy}
                     autoComplete="cc-number"
                     inputMode="numeric"
+                    maxLength={19}
                     placeholder="4343 4343 4343 4345"
                     className="mt-1 w-full rounded-lg border border-teal-800/15 bg-white px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2 disabled:bg-teal-50/50"
                   />
@@ -657,6 +726,11 @@ export function CampaignPaymongoDonate({
               >
                 {busy ? 'Processing…' : 'Donate with card'}
               </button>
+              {err && paymongoFlow === 'card' ? (
+                <p className="mt-3 text-sm text-red-700" role="alert">
+                  {err}
+                </p>
+              ) : null}
             </div>
           )}
         </div>

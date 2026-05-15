@@ -61,6 +61,7 @@ export class SupportService {
     amount: number;
     billingEmail?: string;
     billingPhone?: string;
+    hideAmount?: boolean;
   }): Promise<{ paymentIntentId: string; clientKey: string; qrImageUrl: string }> {
     const campaign = await this.ensurePlatformSupportCampaign();
     const email =
@@ -74,12 +75,14 @@ export class SupportService {
       donorDisplayName: dto.donorDisplayName.trim(),
       billingEmail: email,
       billingPhone: phone,
+      hideAmountPublic: dto.hideAmount === true,
     });
   }
 
   async createPaymongoCardDonation(dto: {
     donorDisplayName: string;
     amount: number;
+    hideAmount?: boolean;
   }): Promise<{ paymentIntentId: string; clientKey: string }> {
     const campaign = await this.ensurePlatformSupportCampaign();
     return this.paymongo.createCardDonationIntent({
@@ -87,6 +90,7 @@ export class SupportService {
       campaignSlug: campaign.slug,
       campaignTitle: campaign.title,
       donorDisplayName: dto.donorDisplayName.trim(),
+      hideAmountPublic: dto.hideAmount === true,
     });
   }
 

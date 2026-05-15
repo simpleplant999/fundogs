@@ -1,9 +1,17 @@
-add organizations campaign on organization profile - DONE
-add organization members on organization profile - DONE
-add profile picture on the user - DONE
-add a profile view on the user - DONE
+- Add top 3 donator with crown or cup
 
+- Add categories eg. Donation, rehoming, medication etc
 
-Add Creator and Organization on Campaign View - DONE
-Add description on card payment - DONE
+- Organization Subscription
 
+- Add featured video on campaign and on organization page
+
+- Add IsActive for campaign instead of deleting it - only the admin make the campaign inactive
+
+- Add lightbox on gallery and profile/org picture and cover photo
+
+- Add the first image of the campaign as a thumbnail when sharing on social media platforms. Change the share icon to share icon
+
+- Add a campaign with no goal amount, and just deadline if possible until the date is reached then it will be mark as completed, also add a deadline even if there is a goal amount
+
+- Ecommerce

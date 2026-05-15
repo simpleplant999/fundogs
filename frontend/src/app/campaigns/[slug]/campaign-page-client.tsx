@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
+import { CampaignUpdatesPanel } from '@/components/campaigns/campaign-updates-panel';
 import { CampaignShareMenu } from '@/components/campaign-share-menu';
 import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
 import { DonorsList } from '@/components/donors-list';
 import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
 import { ProgressBar } from '@/components/progress-bar';
+import { CampaignViewSkeleton } from '@/components/page-skeletons';
 import { getCampaignImages } from '@/lib/campaign-images';
 import { formatPhp } from '@/lib/format-currency';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
@@ -46,7 +48,7 @@ export function CampaignPageClient({
   initialCheckoutSessionId = null,
   initialPaymentIntentId = null,
 }: CampaignPageClientProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const api = useMemo(() => getClientApiBase(), []);
   const router = useRouter();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -258,11 +260,7 @@ export function CampaignPageClient({
   }, [initialDonated, initialCheckoutSessionId, initialPaymentIntentId, slug, api, token]);
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-16 text-center text-amber-950/80 sm:px-6">
-        Loading campaign…
-      </div>
-    );
+    return <CampaignViewSkeleton />;
   }
 
   if (error || !campaign) {
@@ -359,6 +357,15 @@ export function CampaignPageClient({
               <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
             </div>
           </div>
+          {api ? (
+            <CampaignUpdatesPanel
+              slug={slug}
+              campaignId={campaign.id}
+              api={api}
+              token={token}
+              canPost={!!user?.id && !!campaign.authorId && user.id === campaign.authorId}
+            />
+          ) : null}
         </div>
 
         <aside className="space-y-8 lg:pt-2">

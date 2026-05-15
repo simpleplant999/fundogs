@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
+import { ImageLightbox, useImageLightbox } from '@/components/image-lightbox';
 import { uploadCampaignImages } from '@/lib/campaign-images';
 
 const MAX = 12;
@@ -19,6 +20,7 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
   const [urlDraft, setUrlDraft] = useState('');
   const [upErr, setUpErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { state: stripLightbox, openAt, close, prev, next } = useImageLightbox();
 
   async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.target;
@@ -106,13 +108,20 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
         <ul className="flex flex-wrap gap-2">
           {images.map((src, i) => (
             <li key={`${i}-${src.slice(0, 32)}`} className="relative h-14 w-14 overflow-hidden rounded-lg border border-amber-900/15 bg-amber-50">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                title="View larger"
+                className="block h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+                onClick={() => openAt(images, i)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="h-full w-full object-cover" />
+              </button>
               <button
                 type="button"
                 disabled={busy || images.length <= 1}
                 onClick={() => removeAt(i)}
-                className="absolute right-0 top-0 rounded-bl bg-amber-950/80 px-1 text-[10px] font-bold text-white hover:bg-amber-950 disabled:opacity-40"
+                className="absolute right-0 top-0 z-10 rounded-bl bg-amber-950/80 px-1 text-[10px] font-bold text-white hover:bg-amber-950 disabled:opacity-40"
                 aria-label="Remove image"
               >
                 ×
@@ -122,6 +131,13 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
         </ul>
       ) : null}
       <p className="text-xs text-amber-950/55">Up to {MAX} images. First image is the main thumbnail.</p>
+      <ImageLightbox
+        state={stripLightbox}
+        onClose={close}
+        onPrev={prev}
+        onNext={next}
+        ariaLabel="Campaign image"
+      />
     </div>
   );
 }

@@ -1,17 +1,17 @@
-import Link from "next/link";
-import type { Campaign } from "@/lib/types";
-import { getCampaignImages } from "@/lib/campaign-images";
-import { OrganizationVerifiedBadge } from "@/components/organization-verified-badge";
-import { CampaignAuthorProfileLink } from "@/components/campaign-author-profile-link";
-import { formatPhp } from "@/lib/format-currency";
-import { ProgressBar } from "./progress-bar";
+import Link from 'next/link';
+import type { Campaign } from '@/lib/types';
+import { getCampaignImages } from '@/lib/campaign-images';
+import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
+import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
+import { formatPhp } from '@/lib/format-currency';
+import { ProgressBar } from './progress-bar';
 
-function StatusChip({ status }: { status: Campaign["status"] }) {
-  const styles: Record<Campaign["status"], string> = {
-    Published: "bg-teal-100 text-teal-900 ring-teal-600/20",
-    Draft: "bg-zinc-100 text-zinc-700 ring-zinc-500/20",
-    Archived: "bg-amber-100 text-amber-900 ring-amber-600/20",
-    Done: "bg-emerald-100 text-emerald-900 ring-emerald-600/20",
+function StatusChip({ status }: { status: Campaign['status'] }) {
+  const styles: Record<Campaign['status'], string> = {
+    Published: 'bg-teal-100 text-teal-900 ring-teal-600/20',
+    Draft: 'bg-zinc-100 text-zinc-700 ring-zinc-500/20',
+    Archived: 'bg-amber-100 text-amber-900 ring-amber-600/20',
+    Done: 'bg-emerald-100 text-emerald-900 ring-emerald-600/20',
   };
   return (
     <span
@@ -22,23 +22,46 @@ function StatusChip({ status }: { status: Campaign["status"] }) {
   );
 }
 
-export function CampaignCard({ campaign }: { campaign: Campaign }) {
+export function CampaignCard({
+  campaign,
+  equalHeight = false,
+}: {
+  campaign: Campaign;
+  equalHeight?: boolean;
+}) {
+  const heroSrc = getCampaignImages(campaign).filter(Boolean)[0] ?? '';
+
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm shadow-amber-900/5 transition hover:shadow-md">
-      <Link href={`/campaigns/${campaign.slug}`} className="relative block aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-amber-100">
-        {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary campaign image hosts */}
-        <img
-          src={getCampaignImages(campaign)[0]}
-          alt=""
-          className="h-full w-full object-cover"
-        />
+    <article
+      className={`flex flex-col overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm shadow-amber-900/5 transition hover:shadow-md${
+        equalHeight ? ' h-full' : ''
+      }`}
+    >
+      <Link
+        href={`/campaigns/${campaign.slug}`}
+        className="relative block aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-amber-100"
+      >
+        {heroSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary campaign image hosts */}
+            <img src={heroSrc} alt="" className="h-full w-full object-cover" />
+          </>
+        ) : (
+          <div className="flex h-full min-h-[8rem] items-center justify-center text-sm text-amber-950/45">
+            No image
+          </div>
+        )}
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <StatusChip status={campaign.status} />
         </div>
         <Link href={`/campaigns/${campaign.slug}`}>
-          <h2 className="text-lg font-semibold leading-snug text-amber-950 hover:underline">
+          <h2
+            className={`text-lg font-semibold leading-snug text-amber-950 hover:underline${
+              equalHeight ? ' line-clamp-2' : ''
+            }`}
+          >
             {campaign.title}
           </h2>
         </Link>
@@ -66,23 +89,47 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
             ) : null}
           </div>
         ) : null}
-        <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
-        <div className="mt-auto flex items-end justify-between gap-2 text-sm">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-amber-950/55">Raised</p>
-            <p className="font-semibold text-teal-800">{formatPhp(campaign.raisedAmount)}</p>
+        {equalHeight ? (
+          <div className="mt-auto flex flex-col gap-3">
+            <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
+            <div className="flex items-end justify-between gap-2 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Raised</p>
+                <p className="font-semibold text-teal-800">{formatPhp(campaign.raisedAmount)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Goal</p>
+                <p className="font-medium text-amber-950">{formatPhp(campaign.goalAmount)}</p>
+              </div>
+            </div>
+            <Link
+              href={`/campaigns/${campaign.slug}`}
+              className="inline-flex justify-center rounded-full bg-amber-950 px-4 py-2 text-center text-sm font-medium text-amber-50 transition hover:bg-amber-900"
+            >
+              View campaign
+            </Link>
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-amber-950/55">Goal</p>
-            <p className="font-medium text-amber-950">{formatPhp(campaign.goalAmount)}</p>
-          </div>
-        </div>
-        <Link
-          href={`/campaigns/${campaign.slug}`}
-          className="inline-flex justify-center rounded-full bg-amber-950 px-4 py-2 text-center text-sm font-medium text-amber-50 transition hover:bg-amber-900"
-        >
-          View campaign
-        </Link>
+        ) : (
+          <>
+            <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
+            <div className="mt-auto flex items-end justify-between gap-2 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Raised</p>
+                <p className="font-semibold text-teal-800">{formatPhp(campaign.raisedAmount)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-wide text-amber-950/55">Goal</p>
+                <p className="font-medium text-amber-950">{formatPhp(campaign.goalAmount)}</p>
+              </div>
+            </div>
+            <Link
+              href={`/campaigns/${campaign.slug}`}
+              className="inline-flex justify-center rounded-full bg-amber-950 px-4 py-2 text-center text-sm font-medium text-amber-50 transition hover:bg-amber-900"
+            >
+              View campaign
+            </Link>
+          </>
+        )}
       </div>
     </article>
   );

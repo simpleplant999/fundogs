@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { AdminModule } from './admin/admin.module';
 import { PaymentsModule } from './payments/payments.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 
 import { OrganizationsModule } from './organizations/organizations.module';
 import { UsersModule } from './users/users.module';
@@ -18,6 +19,7 @@ import { SupportModule } from './support/support.module';
     PaymentsModule,
     CampaignsModule,
     AdminModule,
+    WithdrawalsModule,
     OrganizationsModule,
     UsersModule,
     SupportModule,
