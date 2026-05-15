@@ -15,6 +15,7 @@ import {
   parseGoalAmountInput,
 } from '@/lib/goal-amount-input';
 import { formatPhp } from '@/lib/format-currency';
+import { CAMPAIGN_TYPES, CAMPAIGN_TYPE_LABELS, getCampaignTypeLabel } from '@/lib/campaign-type';
 import type { Campaign } from '@/lib/types';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
@@ -55,6 +56,7 @@ export function MyCampaignDetailClient({
   const [editGoal, setEditGoal] = useState('');
   const [editRecipientName, setEditRecipientName] = useState('');
   const [editRecipientNote, setEditRecipientNote] = useState('');
+  const [editCampaignType, setEditCampaignType] = useState('other');
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
@@ -98,6 +100,7 @@ export function MyCampaignDetailClient({
     setEditGoal(formatGoalAmountFromNumber(campaign.goalAmount));
     setEditRecipientName(campaign.recipientName);
     setEditRecipientNote(campaign.recipientNote);
+    setEditCampaignType(campaign.campaignType ?? 'other');
     setEditError(null);
   }, [campaign]);
 
@@ -141,6 +144,7 @@ export function MyCampaignDetailClient({
           goalAmount: goal,
           recipientName: editRecipientName.trim(),
           recipientNote: editRecipientNote.trim(),
+          campaignType: editCampaignType,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -268,6 +272,21 @@ export function MyCampaignDetailClient({
               />
             ) : null}
             <label className="block text-sm font-medium text-amber-950">
+              Campaign type
+              <select
+                required
+                value={editCampaignType}
+                onChange={(e) => setEditCampaignType(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-amber-900/15 bg-white px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
+              >
+                {CAMPAIGN_TYPES.map((id) => (
+                  <option key={id} value={id}>
+                    {CAMPAIGN_TYPE_LABELS[id]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-amber-950">
               Goal amount
               <input
                 type="text"
@@ -372,6 +391,10 @@ export function MyCampaignDetailClient({
               </div>
             </div>
             <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4 border-t border-amber-900/10 pt-3 first:border-t-0 first:pt-0">
+                <dt className="text-amber-950/60">Type</dt>
+                <dd className="text-right font-medium text-amber-950">{getCampaignTypeLabel(campaign)}</dd>
+              </div>
               <div className="flex justify-between gap-4 border-t border-amber-900/10 pt-3">
                 <dt className="text-amber-950/60">Lifecycle</dt>
                 <dd className="font-medium text-amber-950">{campaign.status}</dd>

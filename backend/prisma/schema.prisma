@@ -32,6 +32,18 @@ enum CampaignLifecycleStatus {
   DONE
 }
 
+enum CampaignType {
+  MEDICAL_EMERGENCY
+  RESCUE_TRANSPORT
+  SHELTER_DAILY_CARE
+  SPAY_NEUTER_TNR
+  ADOPTION_FOSTER
+  BEHAVIOR_TRAINING
+  MEMORIAL_TRIBUTE
+  COMMUNITY_EDUCATION
+  OTHER
+}
+
 enum CommentModerationStatus {
   PENDING
   VISIBLE
@@ -100,6 +112,7 @@ model Campaign {
   goalAmount      Float
   raisedAmount    Float                   @default(0)
   withdrawnAmount Float                   @default(0)
+  campaignType    CampaignType            @default(OTHER)
   lifecycleStatus CampaignLifecycleStatus @default(DRAFT)
   approvalStatus  CampaignApprovalStatus  @default(PENDING)
   recipientName   String
@@ -114,6 +127,8 @@ model Campaign {
   updates   CampaignUpdate[]
   bankAccount CampaignBankAccount?
   withdrawalRequests WithdrawalRequest[]
+
+  @@index([campaignType])
 }
 
 model CampaignUpdate {

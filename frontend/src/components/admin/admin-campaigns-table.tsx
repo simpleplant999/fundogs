@@ -20,7 +20,8 @@ import {
   parseGoalAmountInput,
 } from '@/lib/goal-amount-input';
 import { formatPhp } from '@/lib/format-currency';
-import type { Donor } from '@/lib/types';
+import { CAMPAIGN_TYPES, CAMPAIGN_TYPE_LABELS, getCampaignTypeLabel } from '@/lib/campaign-type';
+import type { Donor, CampaignTypeId } from '@/lib/types';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
 export type AdminCampaignTableRow = {
@@ -36,6 +37,7 @@ export type AdminCampaignTableRow = {
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   recipientName: string;
   recipientNote: string;
+  campaignType?: CampaignTypeId;
   author?: { id: string; email: string; fullName: string; organization?: { name: string; slug: string } | null };
   createdAt?: string;
 };
@@ -87,14 +89,17 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
   const [editGoal, setEditGoal] = useState('');
   const [editRecipientName, setEditRecipientName] = useState('');
   const [editRecipientNote, setEditRecipientNote] = useState('');
+  const [editCampaignType, setEditCampaignType] = useState<CampaignTypeId>('other');
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [previewDonors, setPreviewDonors] = useState<Donor[]>([]);
+  const [typeFilter, setTypeFilter] = useState<CampaignTypeId | ''>('');
 
   const load = useCallback(async () => {
     if (!api || !token) return;
-    const res = await fetch(`${api}/admin/campaigns`, {
+    const q = typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : '';
+    const res = await fetch(`${api}/admin/campaigns${q}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.status === 403 || res.status === 401) {
@@ -103,7 +108,7 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
     }
     if (!res.ok) return;
     setRows(await res.json());
-  }, [api, token, router]);
+  }, [api, token, router, typeFilter]);
 
   useEffect(() => {
     if (user?.role === 'ADMIN' && token) void load();
@@ -117,6 +122,7 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
     setEditGoal(formatGoalAmountFromNumber(editRow.goalAmount));
     setEditRecipientName(editRow.recipientName);
     setEditRecipientNote(editRow.recipientNote);
+    setEditCampaignType(editRow.campaignType ?? 'other');
     setEditError(null);
   }, [editRow]);
 
@@ -208,6 +214,7 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
           goalAmount: goal,
           recipientName: editRecipientName.trim(),
           recipientNote: editRecipientNote.trim(),
+          campaignType: editCampaignType,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -270,13 +277,32 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
         </p>
         {msg ? <p className={`text-sm text-teal-800 ${showHeading ? 'mt-2' : 'mt-1'}`}>{msg}</p> : null}
 
+        <div className={`flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center ${showHeading ? 'mt-4' : 'mt-3'}`}>
+          <label className="flex flex-col gap-1 text-sm text-amber-950 sm:flex-row sm:items-center sm:gap-2">
+            <span className="font-medium text-amber-950/80">Filter by type</span>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter((e.target.value as CampaignTypeId | '') || '')}
+              className="rounded-lg border border-amber-900/15 bg-white px-3 py-2 text-sm text-amber-950 outline-none ring-teal-600/25 focus:ring-2"
+            >
+              <option value="">All types</option>
+              {CAMPAIGN_TYPES.map((id) => (
+                <option key={id} value={id}>
+                  {CAMPAIGN_TYPE_LABELS[id]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         <div
           className={`overflow-x-auto rounded-lg border border-amber-900/10 ${showHeading ? 'mt-6' : 'mt-4'}`}
         >
-          <table className="min-w-[860px] w-full border-collapse text-left text-sm">
+          <table className="min-w-[960px] w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-amber-900/10 bg-amber-50/80 text-xs font-semibold uppercase tracking-wide text-amber-950/70">
                 <th className="px-3 py-3">Campaign</th>
+                <th className="px-3 py-3">Type</th>
                 <th className="px-3 py-3">Author</th>
                 <th className="px-3 py-3">Lifecycle</th>
                 <th className="px-3 py-3">Approval</th>
@@ -310,6 +336,9 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
                           ) : null}
                         </div>
                       </div>
+                    </td>
+                    <td className="max-w-[160px] px-3 py-3 text-xs leading-snug text-amber-950/80">
+                      {getCampaignTypeLabel({ campaignType: r.campaignType })}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-amber-950/80">
                       {r.author?.fullName ?? '—'}
@@ -426,6 +455,9 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
                     className="rounded-3xl border border-amber-900/10 shadow-sm"
                   />
                   <div className="mt-6 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-violet-900 ring-1 ring-violet-600/25">
+                      {getCampaignTypeLabel({ campaignType: preview.campaignType })}
+                    </span>
                     <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 ring-1 ring-amber-600/25">
                       {preview.status}
                     </span>
@@ -634,6 +666,21 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
                   disabled={editSaving}
                 />
               ) : null}
+              <label className="block text-sm font-medium text-amber-950">
+                Campaign type
+                <select
+                  required
+                  value={editCampaignType}
+                  onChange={(e) => setEditCampaignType(e.target.value as CampaignTypeId)}
+                  className="mt-1 w-full rounded-lg border border-amber-900/15 bg-white px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
+                >
+                  {CAMPAIGN_TYPES.map((id) => (
+                    <option key={id} value={id}>
+                      {CAMPAIGN_TYPE_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="block text-sm font-medium text-amber-950">
                 Goal amount
                 <input

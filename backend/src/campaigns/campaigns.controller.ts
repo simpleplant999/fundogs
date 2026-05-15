@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UploadedFiles,
   UseGuards,
@@ -128,6 +129,7 @@ export class CampaignsController {
       goalAmount: dto.goalAmount,
       recipientName: dto.recipientName,
       recipientNote: dto.recipientNote,
+      campaignType: dto.campaignType,
     });
   }
 
@@ -151,8 +153,8 @@ export class CampaignsController {
   }
 
   @Get()
-  list() {
-    return this.campaigns.listPublic();
+  list(@Query('type') type?: string) {
+    return this.campaigns.listPublic(type);
   }
 
   @Get(':slug/updates')

@@ -6,6 +6,7 @@ import {
 import {
   CampaignApprovalStatus,
   CampaignLifecycleStatus,
+  CampaignType,
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -52,6 +53,7 @@ export class SupportService {
         recipientName: 'FunDogs',
         recipientNote: 'Platform operations and animal rescue support.',
         authorId: admin.id,
+        campaignType: CampaignType.OTHER,
       },
     });
   }

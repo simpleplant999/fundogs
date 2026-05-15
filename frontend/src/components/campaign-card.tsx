@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Campaign } from '@/lib/types';
 import { getCampaignImages } from '@/lib/campaign-images';
+import { getCampaignTypeLabel } from '@/lib/campaign-type';
 import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
 import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
 import { formatPhp } from '@/lib/format-currency';
@@ -49,6 +50,17 @@ export function CampaignCard({
         ) : (
           <div className="flex h-full min-h-[8rem] items-center justify-center text-sm text-amber-950/45">
             No image
+          </div>
+        )}
+        {heroSrc ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent px-3 pb-3 pt-10">
+            <span className="inline-flex max-w-full items-center truncate rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-teal-900 shadow-sm ring-1 ring-black/10">
+              {getCampaignTypeLabel(campaign)}
+            </span>
+          </div>
+        ) : (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-amber-900/10 bg-amber-50/95 px-3 py-2">
+            <span className="text-xs font-semibold text-teal-900">{getCampaignTypeLabel(campaign)}</span>
           </div>
         )}
       </Link>

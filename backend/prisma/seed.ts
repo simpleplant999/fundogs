@@ -1,6 +1,7 @@
 import {
   CampaignApprovalStatus,
   CampaignLifecycleStatus,
+  CampaignType,
   CommentModerationStatus,
   DonationVerificationStatus,
   PrismaClient,
@@ -60,6 +61,7 @@ async function main() {
       recipientName: 'FunDogs',
       recipientNote: 'Platform operations and animal rescue support.',
       authorId: admin.id,
+      campaignType: CampaignType.OTHER,
     },
     update: {},
   });
@@ -92,6 +94,7 @@ async function main() {
       recipientNote:
         'Deposits are reconciled manually. Please keep your branch receipt and tracking number.',
       authorId: admin.id,
+      campaignType: CampaignType.RESCUE_TRANSPORT,
     },
   });
 
@@ -110,6 +113,7 @@ async function main() {
       recipientName: 'Cebu Paws Collective',
       recipientNote: 'Milestone reached — funds released per campaign terms.',
       authorId: admin.id,
+      campaignType: CampaignType.SPAY_NEUTER_TNR,
     },
   });
 
@@ -129,6 +133,7 @@ async function main() {
       recipientNote:
         'Use your bank’s reference field for the fundraising ID when possible.',
       authorId: admin.id,
+      campaignType: CampaignType.SHELTER_DAILY_CARE,
     },
   });
 
@@ -146,6 +151,7 @@ async function main() {
       recipientName: '—',
       recipientNote: '—',
       authorId: demo.id,
+      campaignType: CampaignType.OTHER,
     },
   });
 

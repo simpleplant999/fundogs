@@ -2,6 +2,17 @@ export type CampaignStatus = "Published" | "Draft" | "Archived" | "Done";
 
 export type CampaignApprovalStatus = "pending" | "approved" | "rejected";
 
+export type CampaignTypeId =
+  | "medical_emergency"
+  | "rescue_transport"
+  | "shelter_daily_care"
+  | "spay_neuter_tnr"
+  | "adoption_foster"
+  | "behavior_training"
+  | "memorial_tribute"
+  | "community_education"
+  | "other";
+
 export type DonationVerification = "verified" | "pending" | "rejected";
 
 export interface Campaign {
@@ -14,6 +25,8 @@ export interface Campaign {
   images?: string[];
   goalAmount: number;
   raisedAmount: number;
+  /** Omitted by older APIs; treat as `other`. */
+  campaignType?: CampaignTypeId;
   status: CampaignStatus;
   approvalStatus: CampaignApprovalStatus;
   recipientName: string;
