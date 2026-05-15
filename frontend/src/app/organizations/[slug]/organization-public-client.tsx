@@ -5,6 +5,10 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { CampaignCard } from '@/components/campaign-card';
 import { ImageLightbox, useImageLightbox } from '@/components/image-lightbox';
 import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
+import {
+  OrganizationPublicPageSkeleton,
+  OrganizationTabPanelSkeleton,
+} from '@/components/page-skeletons';
 import { getClientApiBase } from '@/providers/auth-provider';
 import type { Campaign } from '@/lib/types';
 
@@ -70,7 +74,7 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
   }, [load]);
 
   if (status === 'loading') {
-    return <div className="px-4 py-16 text-center text-amber-950/75">Loading…</div>;
+    return <OrganizationPublicPageSkeleton />;
   }
 
   if (status === 'missing' || !org) {
@@ -172,7 +176,7 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
             </nav>
 
             {!extrasLoaded ? (
-              <p className="mt-6 text-sm text-amber-950/60">Loading…</p>
+              <OrganizationTabPanelSkeleton />
             ) : (
               <>
                 <div

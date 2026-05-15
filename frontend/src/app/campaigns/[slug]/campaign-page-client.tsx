@@ -11,6 +11,7 @@ import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
 import { DonorsList } from '@/components/donors-list';
 import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
 import { ProgressBar } from '@/components/progress-bar';
+import { CampaignViewSkeleton } from '@/components/page-skeletons';
 import { getCampaignImages } from '@/lib/campaign-images';
 import { formatPhp } from '@/lib/format-currency';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
@@ -259,11 +260,7 @@ export function CampaignPageClient({
   }, [initialDonated, initialCheckoutSessionId, initialPaymentIntentId, slug, api, token]);
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-16 text-center text-amber-950/80 sm:px-6">
-        Loading campaign…
-      </div>
-    );
+    return <CampaignViewSkeleton />;
   }
 
   if (error || !campaign) {
