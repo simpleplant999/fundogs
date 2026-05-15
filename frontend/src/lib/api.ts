@@ -1,5 +1,6 @@
 import type { Campaign, Comment, Donor } from "./types";
 import { normalizeApiBaseUrl } from "./api-base";
+import { isCampaignTypeId } from "./campaign-type";
 import {
   getCampaignBySlug,
   getCommentsForCampaign,
@@ -55,11 +56,17 @@ export async function fetchPublicUserProfile(userId: string): Promise<PublicUser
   }
 }
 
-export async function fetchPublishedCampaigns(): Promise<Campaign[] | null> {
+export async function fetchPublishedCampaigns(
+  campaignType?: string,
+): Promise<Campaign[] | null> {
   const base = getApiBase();
   if (!base) return null;
+  const q =
+    campaignType && isCampaignTypeId(campaignType)
+      ? `?type=${encodeURIComponent(campaignType)}`
+      : "";
   try {
-    const res = await fetch(`${base}/campaigns`, { cache: 'no-store' });
+    const res = await fetch(`${base}/campaigns${q}`, { cache: 'no-store' });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -109,10 +116,14 @@ export async function fetchComments(slug: string): Promise<Comment[] | null> {
   }
 }
 
-export async function loadPublishedCampaigns(): Promise<Campaign[]> {
-  const remote = await fetchPublishedCampaigns();
+export async function loadPublishedCampaigns(campaignType?: string): Promise<Campaign[]> {
+  const remote = await fetchPublishedCampaigns(campaignType);
   if (remote && Array.isArray(remote)) return remote;
-  return getPublishedAndDoneCampaigns();
+  const all = getPublishedAndDoneCampaigns();
+  if (campaignType && isCampaignTypeId(campaignType)) {
+    return all.filter((c) => c.campaignType === campaignType);
+  }
+  return all;
 }
 
 export async function loadCampaignPageData(slug: string): Promise<{

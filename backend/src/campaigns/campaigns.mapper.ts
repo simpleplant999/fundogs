@@ -6,6 +6,9 @@ import type {
   Donation,
   User,
 } from '@prisma/client';
+import { CampaignType } from '@prisma/client';
+import type { ApiCampaignTypeValue } from './campaign-type.constants';
+import { prismaCampaignTypeToApi } from './campaign-type.constants';
 
 export type ApiCampaign = {
   id: string;
@@ -18,6 +21,7 @@ export type ApiCampaign = {
   images: string[];
   goalAmount: number;
   raisedAmount: number;
+  campaignType: ApiCampaignTypeValue;
   status: 'Published' | 'Draft' | 'Archived' | 'Done';
   approvalStatus: 'pending' | 'approved' | 'rejected';
   recipientName: string;
@@ -102,6 +106,9 @@ export function mapCampaign(c: CampaignWithAuthorOpt): ApiCampaign {
     images,
     goalAmount: c.goalAmount,
     raisedAmount: c.raisedAmount,
+    campaignType: prismaCampaignTypeToApi(
+      (c as Campaign & { campaignType?: CampaignType }).campaignType ?? CampaignType.OTHER,
+    ),
     status: lifecycleToStatus(c.lifecycleStatus),
     approvalStatus: c.approvalStatus.toLowerCase() as ApiCampaign['approvalStatus'],
     recipientName: c.recipientName,

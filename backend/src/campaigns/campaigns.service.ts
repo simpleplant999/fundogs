@@ -23,6 +23,10 @@ import { StripeWebhookService } from '../payments/stripe-webhook.service';
 import { PaymongoService } from '../payments/paymongo.service';
 import { PaymongoWebhookService } from '../payments/paymongo-webhook.service';
 import { PLATFORM_SUPPORT_CAMPAIGN_SLUG } from '../support/platform-support.constants';
+import {
+  apiCampaignTypeToPrisma,
+  tryApiCampaignTypeToPrisma,
+} from './campaign-type.constants';
 
 function slugify(title: string): string {
   const base = title
@@ -66,7 +70,8 @@ export class CampaignsService {
     private readonly paymongoWebhooks: PaymongoWebhookService,
   ) {}
 
-  async listPublic(): Promise<ApiCampaign[]> {
+  async listPublic(campaignTypeFilter?: string): Promise<ApiCampaign[]> {
+    const ct = tryApiCampaignTypeToPrisma(campaignTypeFilter);
     const rows = await this.prisma.campaign.findMany({
       where: {
         slug: { not: PLATFORM_SUPPORT_CAMPAIGN_SLUG },
@@ -77,6 +82,7 @@ export class CampaignsService {
             CampaignLifecycleStatus.DONE,
           ],
         },
+        ...(ct !== undefined ? { campaignType: ct } : {}),
       },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -133,6 +139,7 @@ export class CampaignsService {
       goalAmount?: number;
       recipientName?: string;
       recipientNote?: string;
+      campaignType?: string;
     },
   ): Promise<ApiCampaign> {
     const c = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
@@ -154,6 +161,9 @@ export class CampaignsService {
     if (dto.goalAmount !== undefined) data.goalAmount = dto.goalAmount;
     if (dto.recipientName !== undefined) data.recipientName = dto.recipientName.trim();
     if (dto.recipientNote !== undefined) data.recipientNote = dto.recipientNote.trim();
+    if (dto.campaignType !== undefined) {
+      data.campaignType = apiCampaignTypeToPrisma(dto.campaignType);
+    }
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('Provide at least one field to update');
@@ -200,6 +210,7 @@ export class CampaignsService {
       goalAmount: number;
       recipientName: string;
       recipientNote: string;
+      campaignType: string;
     },
   ): Promise<ApiCampaign> {
     let base = slugify(dto.title);
@@ -226,6 +237,7 @@ export class CampaignsService {
         approvalStatus: CampaignApprovalStatus.PENDING,
         recipientName: dto.recipientName,
         recipientNote: dto.recipientNote,
+        campaignType: apiCampaignTypeToPrisma(dto.campaignType),
         authorId: userId,
       },
     });

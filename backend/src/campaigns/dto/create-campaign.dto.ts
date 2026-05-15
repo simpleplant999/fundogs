@@ -3,12 +3,14 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
   Min,
   MinLength,
 } from 'class-validator';
+import { API_CAMPAIGN_TYPE_VALUES } from '../campaign-type.constants';
 
 export class CreateCampaignDto {
   @IsString()
@@ -42,4 +44,8 @@ export class CreateCampaignDto {
   @IsString()
   @MinLength(1)
   recipientNote!: string;
+
+  @IsString()
+  @IsIn([...API_CAMPAIGN_TYPE_VALUES])
+  campaignType!: string;
 }

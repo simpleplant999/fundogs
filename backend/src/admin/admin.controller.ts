@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -85,14 +86,14 @@ export class AdminController {
     return this.admin.removeOrganizationMember(id, userId);
   }
 
-  @Get('campaigns')
-  allCampaigns() {
-    return this.admin.listAllCampaigns();
-  }
-
   @Get('campaigns/pending')
   pendingCampaigns() {
     return this.admin.listPendingCampaigns();
+  }
+
+  @Get('campaigns')
+  allCampaigns(@Query('type') type?: string) {
+    return this.admin.listAllCampaigns(type);
   }
 
   @Patch('campaigns/:id/approve')

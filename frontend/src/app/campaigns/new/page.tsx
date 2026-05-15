@@ -9,6 +9,7 @@ import {
   formatGoalAmountFromNumber,
   parseGoalAmountInput,
 } from '@/lib/goal-amount-input';
+import { CAMPAIGN_TYPES, CAMPAIGN_TYPE_LABELS } from '@/lib/campaign-type';
 import type { Campaign } from '@/lib/types';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
@@ -22,6 +23,7 @@ export default function NewCampaignPage() {
   const [goalAmount, setGoalAmount] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [recipientNote, setRecipientNote] = useState('');
+  const [campaignType, setCampaignType] = useState<string>('other');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,6 +55,7 @@ export default function NewCampaignPage() {
         goalAmount: goal,
         recipientName,
         recipientNote,
+        campaignType,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -115,6 +118,21 @@ export default function NewCampaignPage() {
         ) : (
           <p className="text-sm text-amber-950/70">Sign in to upload images.</p>
         )}
+        <label className="block text-sm font-medium text-amber-950">
+          Campaign type
+          <select
+            required
+            value={campaignType}
+            onChange={(e) => setCampaignType(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-amber-900/15 bg-white px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
+          >
+            {CAMPAIGN_TYPES.map((id) => (
+              <option key={id} value={id}>
+                {CAMPAIGN_TYPE_LABELS[id]}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="block text-sm font-medium text-amber-950">
           Goal (PHP)
           <input

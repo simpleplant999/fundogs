@@ -11,13 +11,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { mapCampaign } from '../campaigns/campaigns.mapper';
 import { normalizeCampaignImages } from '../campaigns/campaign-images.util';
 import { generateInviteCode, slugifyOrganizationName } from '../common/org-code.util';
+import { apiCampaignTypeToPrisma, tryApiCampaignTypeToPrisma } from '../campaigns/campaign-type.constants';
 
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listAllCampaigns() {
+  async listAllCampaigns(campaignTypeFilter?: string) {
+    const ct = tryApiCampaignTypeToPrisma(campaignTypeFilter);
     const rows = await this.prisma.campaign.findMany({
+      where: ct !== undefined ? { campaignType: ct } : {},
       include: {
         author: {
           select: {
@@ -114,6 +117,7 @@ export class AdminService {
       goalAmount?: number;
       recipientName?: string;
       recipientNote?: string;
+      campaignType?: string;
     },
   ) {
     const c = await this.prisma.campaign.findUnique({ where: { id } });
@@ -133,6 +137,7 @@ export class AdminService {
     if (dto.goalAmount !== undefined) data.goalAmount = dto.goalAmount;
     if (dto.recipientName !== undefined) data.recipientName = dto.recipientName.trim();
     if (dto.recipientNote !== undefined) data.recipientNote = dto.recipientNote.trim();
+    if (dto.campaignType !== undefined) data.campaignType = apiCampaignTypeToPrisma(dto.campaignType);
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('Provide at least one field to update');
     }

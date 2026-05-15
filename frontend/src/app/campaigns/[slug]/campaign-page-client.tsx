@@ -14,6 +14,7 @@ import { ProgressBar } from '@/components/progress-bar';
 import { CampaignViewSkeleton } from '@/components/page-skeletons';
 import { getCampaignImages } from '@/lib/campaign-images';
 import { formatPhp } from '@/lib/format-currency';
+import { getCampaignTypeLabel } from '@/lib/campaign-type';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 import type { Campaign, Donor } from '@/lib/types';
 
@@ -302,6 +303,9 @@ export function CampaignPageClient({
             className="rounded-3xl border border-amber-900/10 shadow-sm"
           />
           <div className="mt-6 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-violet-900 ring-1 ring-violet-600/25">
+              {getCampaignTypeLabel(campaign)}
+            </span>
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 ring-1 ring-amber-600/25">
               {campaign.status}
             </span>

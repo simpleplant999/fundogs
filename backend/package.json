@@ -18,6 +18,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "render:build": "npm run build && node scripts/render-db-push.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
