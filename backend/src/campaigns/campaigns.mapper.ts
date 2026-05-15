@@ -1,6 +1,7 @@
 import type {
   Campaign,
   CampaignLifecycleStatus,
+  CampaignUpdate,
   Comment,
   Donation,
   User,
@@ -44,6 +45,15 @@ export type ApiDonor = {
   amount: number;
   verification: 'verified' | 'pending' | 'rejected';
   date: string;
+};
+
+export type ApiCampaignUpdate = {
+  id: string;
+  title: string;
+  body: string;
+  /** Gallery images attached to this update (0–6). */
+  images: string[];
+  createdAt: string;
 };
 
 function lifecycleToStatus(s: CampaignLifecycleStatus): ApiCampaign['status'] {
@@ -107,6 +117,19 @@ export function mapComment(c: Comment & { author?: User | null }): ApiComment {
     body: c.body,
     status: st,
     createdAt: c.createdAt.toISOString(),
+  };
+}
+
+export function mapCampaignUpdate(row: CampaignUpdate): ApiCampaignUpdate {
+  /** After `prisma generate`, `imageUrls` is on {@link CampaignUpdate}; cast supports stale client during Windows EPERM locks. */
+  const imgs = (row as CampaignUpdate & { imageUrls?: string[] }).imageUrls;
+  const images = imgs?.length ? [...imgs] : [];
+  return {
+    id: row.id,
+    title: row.title.trim(),
+    body: row.body,
+    images,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 

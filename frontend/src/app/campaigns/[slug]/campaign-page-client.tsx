@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
+import { CampaignUpdatesPanel } from '@/components/campaigns/campaign-updates-panel';
 import { CampaignShareMenu } from '@/components/campaign-share-menu';
 import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
 import { DonorsList } from '@/components/donors-list';
@@ -46,7 +47,7 @@ export function CampaignPageClient({
   initialCheckoutSessionId = null,
   initialPaymentIntentId = null,
 }: CampaignPageClientProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const api = useMemo(() => getClientApiBase(), []);
   const router = useRouter();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -359,6 +360,15 @@ export function CampaignPageClient({
               <ProgressBar raised={campaign.raisedAmount} goal={campaign.goalAmount} />
             </div>
           </div>
+          {api ? (
+            <CampaignUpdatesPanel
+              slug={slug}
+              campaignId={campaign.id}
+              api={api}
+              token={token}
+              canPost={!!user?.id && !!campaign.authorId && user.id === campaign.authorId}
+            />
+          ) : null}
         </div>
 
         <aside className="space-y-8 lg:pt-2">

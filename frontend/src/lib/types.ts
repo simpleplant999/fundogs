@@ -44,3 +44,12 @@ export interface Comment {
   status: "visible" | "pending" | "rejected";
   createdAt: string;
 }
+
+export interface CampaignUpdate {
+  id: string;
+  title: string;
+  body: string;
+  /** Image URLs from the server (may be empty). */
+  images: string[];
+  createdAt: string;
+}

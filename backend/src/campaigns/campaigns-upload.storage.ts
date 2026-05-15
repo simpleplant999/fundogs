@@ -46,8 +46,10 @@ export function publicCampaignImageUrl(
   req: { protocol: string; get(name: string): string | undefined },
   filename: string,
 ): string {
-  const host = req.get('host') || 'localhost:4000';
-  const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+  const forwardedHost = req.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const host = forwardedHost || req.get('host') || 'localhost:4000';
+  const forwardedProto = req.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const proto = forwardedProto || req.protocol || 'http';
   const safeProto = proto === 'https' ? 'https' : 'http';
   return `${safeProto}://${host}/uploads/campaigns/${filename}`;
 }

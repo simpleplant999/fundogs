@@ -15,8 +15,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtUserPayload } from '../auth/jwt.strategy';
-import { mapCampaign, mapComment, mapDonation } from './campaigns.mapper';
-import type { ApiCampaign, ApiComment, ApiDonor } from './campaigns.mapper';
+import { mapCampaign, mapCampaignUpdate, mapComment, mapDonation } from './campaigns.mapper';
+import type { ApiCampaign, ApiCampaignUpdate, ApiComment, ApiDonor } from './campaigns.mapper';
 import { normalizeCampaignImages } from './campaign-images.util';
 import { StripeService } from '../payments/stripe.service';
 import { StripeWebhookService } from '../payments/stripe-webhook.service';
@@ -259,6 +259,45 @@ export class CampaignsService {
       take: 40,
     });
     return rows.map(mapDonation);
+  }
+
+  async getCampaignUpdates(slug: string, viewer?: JwtUserPayload): Promise<ApiCampaignUpdate[]> {
+    const c = await this.getCampaignRowBySlug(slug);
+    if (!canViewCampaign(c, viewer)) throw new NotFoundException();
+    const rows = await this.prisma.campaignUpdate.findMany({
+      where: { campaignId: c.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return rows.map(mapCampaignUpdate);
+  }
+
+  async createCampaignUpdate(
+    userId: string,
+    campaignId: string,
+    dto: { title?: string; body: string; imageUrls?: string[] },
+  ): Promise<ApiCampaignUpdate> {
+    const body = dto.body.trim();
+    if (!body) throw new BadRequestException('body is required');
+    const title = (dto.title ?? '').trim().slice(0, 200);
+    const imageUrls = (dto.imageUrls ?? [])
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, 6);
+    const c = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!c) throw new NotFoundException('Campaign not found');
+    if (c.authorId !== userId) throw new ForbiddenException('Not your campaign');
+
+    const row = await this.prisma.campaignUpdate.create({
+      data: {
+        campaignId: c.id,
+        authorId: userId,
+        title,
+        body,
+        imageUrls,
+      } as Prisma.CampaignUpdateUncheckedCreateInput,
+    });
+    return mapCampaignUpdate(row);
   }
 
   async getComments(slug: string, viewer?: JwtUserPayload): Promise<ApiComment[]> {

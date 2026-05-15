@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CampaignCard } from '@/components/campaign-card';
 import { ProfileHistoryBackButton } from '@/components/profile-history-back-button';
+import { PublicUserProfilePhoto } from '@/components/public-user-profile-photo';
 import { fetchPublicUserProfile } from '@/lib/api';
 import type { Campaign } from '@/lib/types';
 import { sanitizeInternalReturnPath } from '@/lib/sanitize-return-to';
@@ -27,8 +28,8 @@ function CampaignGrid({ items }: { items: Campaign[] }) {
   return (
     <ul className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((c) => (
-        <li key={c.id}>
-          <CampaignCard campaign={c} />
+        <li key={c.id} className="h-full min-h-0">
+          <CampaignCard campaign={c} equalHeight />
         </li>
       ))}
     </ul>
@@ -68,16 +69,7 @@ export default async function PublicUserProfilePage({
         )}
       </p>
       <article className="mt-6 overflow-hidden rounded-2xl border border-amber-900/10 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto h-28 w-28 overflow-hidden rounded-full border-2 border-amber-900/10 bg-amber-50">
-          {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photo} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-amber-950/35">
-              {initial}
-            </div>
-          )}
-        </div>
+        <PublicUserProfilePhoto photoUrl={photo ?? null} fallbackInitial={initial} />
         <h1 className="mt-5 text-2xl font-bold text-amber-950">{profile.fullName}</h1>
         <p className="mt-2 text-sm text-amber-950/60">FunDogs member</p>
         {profile.organization ? (

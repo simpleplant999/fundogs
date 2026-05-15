@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { CampaignCard } from '@/components/campaign-card';
+import { ImageLightbox, useImageLightbox } from '@/components/image-lightbox';
 import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
 import { getClientApiBase } from '@/providers/auth-provider';
 import type { Campaign } from '@/lib/types';
@@ -37,6 +38,7 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
   const [members, setMembers] = useState<PublicOrgProfileMember[]>([]);
   const [extrasLoaded, setExtrasLoaded] = useState(false);
   const [tab, setTab] = useState<OrgTab>('campaigns');
+  const { state: lightbox, openAt, close, prev, next } = useImageLightbox();
 
   const load = useCallback(async () => {
     if (!api) {
@@ -97,8 +99,15 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
       <div className="overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm">
         <div className="relative aspect-[21/6] w-full bg-amber-100">
           {org.coverPhotoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={org.coverPhotoUrl} alt="" className="h-full w-full object-cover" />
+            <button
+              type="button"
+              title="View cover photo larger"
+              className="relative h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+              onClick={() => openAt([org.coverPhotoUrl], 0)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={org.coverPhotoUrl} alt="" className="h-full w-full object-cover" />
+            </button>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-amber-950/45">No cover photo</div>
           )}
@@ -107,8 +116,15 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
           <div className="-mt-14 flex flex-col items-center sm:-mt-10 sm:flex-row sm:items-end sm:gap-6">
             <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-amber-50 shadow-md sm:h-32 sm:w-32">
               {org.profilePhotoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={org.profilePhotoUrl} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  title="View logo larger"
+                  className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+                  onClick={() => openAt([org.profilePhotoUrl], 0)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={org.profilePhotoUrl} alt="" className="h-full w-full object-cover" />
+                </button>
               ) : (
                 <div className="flex h-full items-center justify-center text-xs text-amber-950/40">No logo</div>
               )}
@@ -197,26 +213,35 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
                       {members.map((m) => {
                         const initial = (m.fullName?.trim().charAt(0) || '?').toUpperCase();
                         const photo = m.profilePhotoUrl?.trim();
+                        const profileHref = `/users/${encodeURIComponent(m.id)}?returnTo=${encodeURIComponent(`/organizations/${slug}`)}`;
                         return (
                           <li key={m.id}>
-                            <Link
-                              href={`/users/${encodeURIComponent(m.id)}?returnTo=${encodeURIComponent(`/organizations/${slug}`)}`}
-                              className="group flex h-full flex-col items-center rounded-2xl border border-amber-900/10 bg-white p-5 text-center shadow-sm outline-none ring-teal-600/0 transition-shadow hover:border-amber-900/20 hover:shadow-md focus-visible:ring-2"
-                              aria-label={`View profile: ${m.fullName}`}
-                            >
+                            <div className="flex h-full flex-col items-center rounded-2xl border border-amber-900/10 bg-white p-5 text-center shadow-sm outline-none ring-teal-600/0 transition-shadow hover:border-amber-900/20 hover:shadow-md focus-within:ring-2 focus-within:ring-teal-600/30">
                               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-amber-900/10 bg-amber-50 shadow-inner">
                                 {photo ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={photo} alt="" className="h-full w-full object-cover" />
+                                  <button
+                                    type="button"
+                                    title="View photo larger"
+                                    className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+                                    onClick={() => openAt([photo], 0)}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={photo} alt="" className="h-full w-full object-cover" />
+                                  </button>
                                 ) : (
                                   <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-amber-950/35">
                                     {initial}
                                   </div>
                                 )}
                               </div>
-                              <p className="mt-4 text-base font-semibold leading-snug text-amber-950">{m.fullName}</p>
+                              <Link
+                                href={profileHref}
+                                className="mt-4 text-base font-semibold leading-snug text-amber-950 underline-offset-2 hover:text-teal-900 hover:underline"
+                              >
+                                {m.fullName}
+                              </Link>
                               <span
-                                className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold transition-colors group-hover:ring-teal-700/20 ${
+                                className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                                   m.organizationMemberRole === 'ADMIN'
                                     ? 'bg-amber-950/10 text-amber-950 ring-1 ring-amber-950/15'
                                     : 'bg-amber-100 text-amber-900 ring-1 ring-amber-900/10'
@@ -224,10 +249,13 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
                               >
                                 {m.organizationMemberRole === 'ADMIN' ? 'Organization admin' : 'Member'}
                               </span>
-                              <span className="mt-4 text-sm font-semibold text-teal-800 underline decoration-teal-800/30 underline-offset-2 group-hover:decoration-teal-800">
+                              <Link
+                                href={profileHref}
+                                className="mt-4 text-sm font-semibold text-teal-800 underline decoration-teal-800/30 underline-offset-2 hover:decoration-teal-800"
+                              >
                                 View profile
-                              </span>
-                            </Link>
+                              </Link>
+                            </div>
                           </li>
                         );
                       })}
@@ -250,8 +278,15 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
                     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       {gallery.map((url) => (
                         <li key={url} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-amber-50">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            title="View larger"
+                            className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+                            onClick={() => openAt(gallery, gallery.indexOf(url))}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="" className="h-full w-full object-cover" />
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -262,6 +297,7 @@ export function OrganizationPublicClient({ slug }: { slug: string }) {
           </div>
         </div>
       </div>
+      <ImageLightbox state={lightbox} onClose={close} onPrev={prev} onNext={next} ariaLabel="Photo" />
     </article>
   );
 }

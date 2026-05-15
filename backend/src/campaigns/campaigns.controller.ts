@@ -16,6 +16,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { CreateCampaignUpdateDto } from './dto/create-campaign-update.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateDonationCheckoutDto } from './dto/create-donation-checkout.dto';
 import { CreateDonationDto } from './dto/create-donation.dto';
@@ -91,6 +92,20 @@ export class CampaignsController {
     return this.withdrawals.createCreatorWithdrawal(user.sub, id, dto);
   }
 
+  @Post('me/:id/updates')
+  @UseGuards(AuthGuard('jwt'))
+  createMyUpdate(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateCampaignUpdateDto,
+  ) {
+    return this.campaigns.createCampaignUpdate(user.sub, id, {
+      title: dto.title,
+      body: dto.body,
+      imageUrls: dto.imageUrls,
+    });
+  }
+
   @Post()
   @UseGuards(AuthGuard('jwt'))
   create(@CurrentUser() user: JwtUserPayload, @Body() dto: CreateCampaignDto) {
@@ -127,6 +142,12 @@ export class CampaignsController {
   @Get()
   list() {
     return this.campaigns.listPublic();
+  }
+
+  @Get(':slug/updates')
+  @UseGuards(OptionalJwtGuard)
+  listUpdates(@Param('slug') slug: string, @Req() req: Request & { user?: JwtUserPayload }) {
+    return this.campaigns.getCampaignUpdates(slug, req.user);
   }
 
   @Get(':slug')

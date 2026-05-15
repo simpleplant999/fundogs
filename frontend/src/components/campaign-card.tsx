@@ -1,17 +1,17 @@
-import Link from "next/link";
-import type { Campaign } from "@/lib/types";
-import { getCampaignImages } from "@/lib/campaign-images";
-import { OrganizationVerifiedBadge } from "@/components/organization-verified-badge";
-import { CampaignAuthorProfileLink } from "@/components/campaign-author-profile-link";
-import { formatPhp } from "@/lib/format-currency";
-import { ProgressBar } from "./progress-bar";
+import Link from 'next/link';
+import type { Campaign } from '@/lib/types';
+import { getCampaignImages } from '@/lib/campaign-images';
+import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
+import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
+import { formatPhp } from '@/lib/format-currency';
+import { ProgressBar } from './progress-bar';
 
-function StatusChip({ status }: { status: Campaign["status"] }) {
-  const styles: Record<Campaign["status"], string> = {
-    Published: "bg-teal-100 text-teal-900 ring-teal-600/20",
-    Draft: "bg-zinc-100 text-zinc-700 ring-zinc-500/20",
-    Archived: "bg-amber-100 text-amber-900 ring-amber-600/20",
-    Done: "bg-emerald-100 text-emerald-900 ring-emerald-600/20",
+function StatusChip({ status }: { status: Campaign['status'] }) {
+  const styles: Record<Campaign['status'], string> = {
+    Published: 'bg-teal-100 text-teal-900 ring-teal-600/20',
+    Draft: 'bg-zinc-100 text-zinc-700 ring-zinc-500/20',
+    Archived: 'bg-amber-100 text-amber-900 ring-amber-600/20',
+    Done: 'bg-emerald-100 text-emerald-900 ring-emerald-600/20',
   };
   return (
     <span
@@ -29,19 +29,28 @@ export function CampaignCard({
   campaign: Campaign;
   equalHeight?: boolean;
 }) {
+  const heroSrc = getCampaignImages(campaign).filter(Boolean)[0] ?? '';
+
   return (
     <article
       className={`flex flex-col overflow-hidden rounded-2xl border border-amber-900/10 bg-white shadow-sm shadow-amber-900/5 transition hover:shadow-md${
         equalHeight ? ' h-full' : ''
       }`}
     >
-      <Link href={`/campaigns/${campaign.slug}`} className="relative block aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-amber-100">
-        {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary campaign image hosts */}
-        <img
-          src={getCampaignImages(campaign)[0]}
-          alt=""
-          className="h-full w-full object-cover"
-        />
+      <Link
+        href={`/campaigns/${campaign.slug}`}
+        className="relative block aspect-[16/10] w-full overflow-hidden rounded-t-2xl bg-amber-100"
+      >
+        {heroSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary campaign image hosts */}
+            <img src={heroSrc} alt="" className="h-full w-full object-cover" />
+          </>
+        ) : (
+          <div className="flex h-full min-h-[8rem] items-center justify-center text-sm text-amber-950/45">
+            No image
+          </div>
+        )}
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">

@@ -2,8 +2,6 @@
 
 - Add top 3 donator with crown or cup
 
-
-
 - Add categories eg. Donation, rehoming, medication etc
 
 - Organization Subscription
@@ -16,7 +14,6 @@
 
 - Add the first image of the campaign as a thumbnail when sharing on social media platforms. Change the share icon to share icon
 
-- Add a campaign with no goal amount, and just deadline if possible until the date is reached then it will be mark as completed, also add a 
-deadline even if there is a goal amount
+- Add a campaign with no goal amount, and just deadline if possible until the date is reached then it will be mark as completed, also add a deadline even if there is a goal amount
 
 - Ecommerce

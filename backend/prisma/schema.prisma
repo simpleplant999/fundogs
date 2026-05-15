@@ -66,6 +66,7 @@ model User {
 
   campaigns Campaign[]
   comments  Comment[]
+  campaignUpdates CampaignUpdate[]
   withdrawalRequests WithdrawalRequest[]
 }
 
@@ -105,8 +106,23 @@ model Campaign {
 
   comments  Comment[]
   donations Donation[]
+  updates   CampaignUpdate[]
   bankAccount CampaignBankAccount?
   withdrawalRequests WithdrawalRequest[]
+}
+
+model CampaignUpdate {
+  id         String   @id @default(uuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  title      String   @default("")
+  body       String
+  imageUrls  String[] @default([])
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId])
 }
 
 model CampaignBankAccount {

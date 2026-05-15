@@ -7,6 +7,28 @@ export function getCampaignImages(c: Pick<Campaign, 'images' | 'imageUrl'>): str
   return [c.imageUrl];
 }
 
+/**
+ * Use the same origin the app uses for `fetch(apiBase/...)`, so images load in the browser.
+ * Nest builds upload URLs from `Host` / `X-Forwarded-*`, which often differs from NEXT_PUBLIC_API_URL.
+ */
+export function resolveMediaUrlToApiOrigin(apiBase: string, url: string): string {
+  const raw = url.trim();
+  if (!raw || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
+  const base = apiBase.trim().replace(/\/+$/, '');
+  if (!base) return raw;
+  try {
+    const api = new URL(base.includes('://') ? base : `https://${base}`);
+    const origin = `${api.protocol}//${api.host}`;
+    if (raw.startsWith('/')) {
+      return `${origin}${raw}`;
+    }
+    const u = new URL(raw);
+    return `${origin}${u.pathname}${u.search}`;
+  } catch {
+    return raw;
+  }
+}
+
 export async function uploadCampaignImages(
   apiBase: string,
   token: string,
@@ -36,5 +58,5 @@ export async function uploadCampaignImages(
     throw new Error(msg);
   }
   if (!data.urls?.length) throw new Error('No image URLs returned from server.');
-  return data.urls;
+  return data.urls.map((u) => resolveMediaUrlToApiOrigin(apiBase, u));
 }

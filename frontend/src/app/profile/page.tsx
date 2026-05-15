@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { ImageLightbox, useImageLightbox } from '@/components/image-lightbox';
 import { useAuth } from '@/providers/auth-provider';
 
 const inputClass =
@@ -24,6 +25,8 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPw, setSavingPw] = useState(false);
   const [pwErr, setPwErr] = useState<string | null>(null);
+
+  const { state: lightbox, openAt, close, prev, next } = useImageLightbox();
 
   useEffect(() => {
     if (user?.fullName != null) setName(user.fullName);
@@ -172,12 +175,19 @@ export default function ProfilePage() {
             <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-2 border-amber-900/15 bg-amber-50">
                 {displayAvatarSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={displayAvatarSrc}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
+                  <button
+                    type="button"
+                    title="View profile photo larger"
+                    className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+                    onClick={() => openAt([displayAvatarSrc], 0)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={displayAvatarSrc}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-amber-950/30">
                     {(user.fullName?.trim().charAt(0) || '?').toUpperCase()}
@@ -334,6 +344,8 @@ export default function ProfilePage() {
           ) : null}
         </div>
       </div>
+
+      <ImageLightbox state={lightbox} onClose={close} onPrev={prev} onNext={next} ariaLabel="Profile photo" />
 
       {passwordModalOpen ? (
         <div

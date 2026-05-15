@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
 import { CampaignImagesEditor } from '@/components/campaign-images-editor';
+import { CampaignUpdatesPanel } from '@/components/campaigns/campaign-updates-panel';
 import { CampaignWithdrawalsPanel } from '@/components/campaigns/campaign-withdrawals-panel';
 import { ProgressBar } from '@/components/progress-bar';
 import { getCampaignImages } from '@/lib/campaign-images';
@@ -17,7 +18,7 @@ import { formatPhp } from '@/lib/format-currency';
 import type { Campaign } from '@/lib/types';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
-type DetailTab = 'overview' | 'withdrawals';
+type DetailTab = 'overview' | 'updates' | 'withdrawals';
 
 function approvalLabel(s?: string) {
   if (!s) return '—';
@@ -191,6 +192,7 @@ export function MyCampaignDetailClient({
 
   const tabs: { id: DetailTab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
+    { id: 'updates', label: 'Updates' },
     { id: 'withdrawals', label: 'Withdrawal requests' },
   ];
 
@@ -395,6 +397,25 @@ export function MyCampaignDetailClient({
                 Open public campaign page
               </Link>
             </div>
+          </div>
+
+          <div
+            id={`${tabListId}-panel-updates`}
+            role="tabpanel"
+            aria-labelledby={`${tabListId}-updates`}
+            hidden={tab !== 'updates'}
+            className="rounded-b-2xl rounded-tr-2xl border border-amber-900/10 bg-white p-6 shadow-sm"
+          >
+            {token ? (
+              <CampaignUpdatesPanel
+                slug={campaign.slug}
+                campaignId={campaign.id}
+                api={api}
+                token={token}
+                canPost
+                embedded
+              />
+            ) : null}
           </div>
 
           <div
