@@ -8,6 +8,7 @@ type Summary = {
   userCount: number;
   organizationCount: number;
   campaignCount: number;
+  contactMessageCount: number;
 };
 
 export default function AdminHomePage() {
@@ -32,11 +33,11 @@ export default function AdminHomePage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-bold text-amber-950 sm:text-3xl">Overview</h1>
       <p className="mt-2 text-sm text-amber-950/75">
-        Signed in as <span className="font-medium text-amber-950">{user?.email}</span>. Use the sidebar to manage
-        users, organizations, and campaigns.
+        Signed in as <span className="font-medium text-amber-950">{user?.email}</span>. Use the sidebar for users,
+        organizations, campaigns, withdrawals, and contact form submissions.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Link
           href="/admin/users"
           className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm transition hover:border-teal-700/30 hover:shadow-md"
@@ -60,6 +61,14 @@ export default function AdminHomePage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Campaigns</p>
           <p className="mt-2 text-3xl font-bold text-amber-950">{summary?.campaignCount ?? '—'}</p>
           <p className="mt-2 text-sm text-teal-800">Moderation &amp; edits →</p>
+        </Link>
+        <Link
+          href="/admin/contact-messages"
+          className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm transition hover:border-teal-700/30 hover:shadow-md"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Contact</p>
+          <p className="mt-2 text-3xl font-bold text-amber-950">{summary?.contactMessageCount ?? '—'}</p>
+          <p className="mt-2 text-sm text-teal-800">Form submissions →</p>
         </Link>
       </div>
     </div>

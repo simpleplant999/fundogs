@@ -173,12 +173,13 @@ export class AdminService {
   }
 
   async getSummary() {
-    const [userCount, organizationCount, campaignCount] = await Promise.all([
+    const [userCount, organizationCount, campaignCount, contactMessageCount] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.organization.count(),
       this.prisma.campaign.count(),
+      this.prisma.contactMessage.count(),
     ]);
-    return { userCount, organizationCount, campaignCount };
+    return { userCount, organizationCount, campaignCount, contactMessageCount };
   }
 
   async listUsers() {
@@ -422,5 +423,20 @@ export class AdminService {
       data: { organizationId: null, organizationMemberRole: null },
     });
     return { ok: true, userId };
+  }
+
+  async listContactMessages() {
+    const rows = await this.prisma.contactMessage.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      createdAt: r.createdAt.toISOString(),
+      name: r.name,
+      email: r.email,
+      category: r.category,
+      message: r.message,
+    }));
   }
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { getClientApiBase, useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -21,7 +21,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const u = await register(fullName, email, password, inviteCode.trim() || undefined);
-      router.push(u.role === 'ADMIN' ? '/admin' : '/profile');
+      router.push(u.role === 'ADMIN' ? '/admin' : '/campaigns/dashboard');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');

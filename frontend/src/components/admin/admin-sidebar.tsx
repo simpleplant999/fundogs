@@ -9,6 +9,7 @@ const NAV = [
   { href: '/admin/organizations', label: 'Organizations' },
   { href: '/admin/campaigns', label: 'Campaigns' },
   { href: '/admin/withdrawals', label: 'Withdrawals' },
+  { href: '/admin/contact-messages', label: 'Contact' },
 ] as const;
 
 export function AdminSidebar() {
