@@ -15,6 +15,11 @@ export function SiteFooter() {
             <p className="font-medium text-amber-100">Explore</p>
             <ul className="space-y-1 text-amber-100/85">
               <li>
+                <Link href="/contact" className="hover:underline">
+                  Contact us
+                </Link>
+              </li>
+              <li>
                 <Link href="/support" className="hover:underline">
                   Support us
                 </Link>

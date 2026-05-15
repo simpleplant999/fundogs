@@ -30,6 +30,11 @@ export class AdminController {
     private readonly withdrawals: WithdrawalsService,
   ) {}
 
+  @Get('contact-messages')
+  listContactMessages() {
+    return this.admin.listContactMessages();
+  }
+
   @Get('summary')
   summary() {
     return this.admin.getSummary();

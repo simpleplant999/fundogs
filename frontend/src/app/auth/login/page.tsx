@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { getClientApiBase, useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const u = await login(email, password);
-      router.push(u.role === 'ADMIN' ? '/admin' : '/profile');
+      router.push(u.role === 'ADMIN' ? '/admin' : '/campaigns/dashboard');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

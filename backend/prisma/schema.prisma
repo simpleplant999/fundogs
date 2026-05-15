@@ -51,6 +51,11 @@ enum WithdrawalRequestStatus {
   PAID
 }
 
+enum ContactMessageCategory {
+  REPORT_PROBLEM
+  GENERAL_QUESTION
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -161,6 +166,17 @@ model Comment {
   body             String
   moderationStatus CommentModerationStatus @default(PENDING)
   createdAt        DateTime                @default(now())
+}
+
+model ContactMessage {
+  id        String                 @id @default(uuid())
+  createdAt DateTime               @default(now())
+  name      String
+  email     String
+  category  ContactMessageCategory
+  message   String
+
+  @@index([createdAt])
 }
 
 model Donation {
