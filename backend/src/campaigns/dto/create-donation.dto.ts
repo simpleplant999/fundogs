@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsNumber, IsString, Min, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 export class CreateDonationDto {
   @IsString()
@@ -19,4 +19,9 @@ export class CreateDonationDto {
 
   @IsString()
   fundraisingReference!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === 1 || value === '1')
+  @IsBoolean()
+  hideAmount?: boolean;
 }

@@ -179,5 +179,7 @@ model Donation {
   /** PayMongo PaymentIntent id (QR Ph / wallets) — webhook + sync idempotency */
   paymongoPaymentIntentId String?                      @unique
   verificationStatus      DonationVerificationStatus @default(PENDING)
+  /** When true, public donor list masks the amount (gift still counts toward raised total). */
+  hideAmountPublic        Boolean                      @default(false)
   createdAt               DateTime                     @default(now())
 }

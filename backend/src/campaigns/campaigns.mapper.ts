@@ -42,7 +42,9 @@ export type ApiComment = {
 export type ApiDonor = {
   id: string;
   name: string;
-  amount: number;
+  /** Null when the donor asked to hide the amount on the public list (still counted in campaign total). */
+  amount: number | null;
+  hideAmount: boolean;
   verification: 'verified' | 'pending' | 'rejected';
   date: string;
 };
@@ -135,10 +137,12 @@ export function mapCampaignUpdate(row: CampaignUpdate): ApiCampaignUpdate {
 
 export function mapDonation(d: Donation): ApiDonor {
   const v = d.verificationStatus.toLowerCase() as ApiDonor['verification'];
+  const hide = d.hideAmountPublic;
   return {
     id: d.id,
     name: d.donorDisplayName,
-    amount: d.amount,
+    amount: hide ? null : d.amount,
+    hideAmount: hide,
     verification: v === 'verified' ? 'verified' : v === 'rejected' ? 'rejected' : 'pending',
     date: d.createdAt.toISOString(),
   };

@@ -5,6 +5,7 @@ import { flushSync } from 'react-dom';
 import { ImageLightbox } from '@/components/image-lightbox';
 import type { CampaignUpdate } from '@/lib/types';
 import { resolveMediaUrlToApiOrigin, uploadCampaignImages } from '@/lib/campaign-images';
+import { useAuth } from '@/providers/auth-provider';
 
 const MAX_UPDATE_IMAGES = 6;
 
@@ -48,6 +49,7 @@ export function CampaignUpdatesPanel({
   /** When true, omit outer spacing and visible title (e.g. inside a tab panel). */
   embedded?: boolean;
 }) {
+  const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadPreviewBlobsRef = useRef<string[]>([]);
   const tokenRef = useRef<string | null>(token);
@@ -71,7 +73,10 @@ export function CampaignUpdatesPanel({
   const [postErr, setPostErr] = useState<string | null>(null);
   const [postOk, setPostOk] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteErr, setDeleteErr] = useState<string | null>(null);
 
+  const canDelete = Boolean(token && (canPost || user?.role === 'ADMIN'));
   const imageBusy = posting || imageUploading;
   const draftDisplayCount = draftImageUrls.length + uploadPreviewUrls.length;
   const mediaUrl = (url: string) => resolveMediaUrlToApiOrigin(api, url);
@@ -297,6 +302,30 @@ export function CampaignUpdatesPanel({
     }
   }
 
+  async function deleteUpdate(updateId: string) {
+    if (!token || !canDelete) return;
+    if (!window.confirm('Remove this update? Supporters will no longer see it.')) return;
+    setDeleteErr(null);
+    setDeletingId(updateId);
+    try {
+      const res = await fetch(
+        `${api}/campaigns/me/${encodeURIComponent(campaignId)}/updates/${encodeURIComponent(updateId)}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteErr(parseApiError(data));
+        return;
+      }
+      setItems((prev) => prev.filter((x) => x.id !== updateId));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <section
       className={embedded ? '' : 'mt-10 border-t border-amber-900/10 pt-10'}
@@ -489,6 +518,7 @@ export function CampaignUpdatesPanel({
           </p>
         ) : (
           <ol className="space-y-0">
+            {deleteErr ? <p className="mb-3 text-sm text-red-700">{deleteErr}</p> : null}
             {items.map((u, i) => {
               const imgs = updateImages(u);
               const lightboxUrlsForUpdate = imgs.map((x) => mediaUrl(x));
@@ -504,9 +534,21 @@ export function CampaignUpdatesPanel({
                     ) : null}
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">
-                    <time className="text-xs font-medium uppercase tracking-wide text-amber-950/50">
-                      {formatUpdateDate(u.createdAt)}
-                    </time>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <time className="text-xs font-medium uppercase tracking-wide text-amber-950/50">
+                        {formatUpdateDate(u.createdAt)}
+                      </time>
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          disabled={deletingId === u.id}
+                          onClick={() => void deleteUpdate(u.id)}
+                          className="shrink-0 text-xs font-medium text-red-700 underline-offset-2 hover:underline disabled:opacity-50"
+                        >
+                          {deletingId === u.id ? 'Deleting…' : 'Delete'}
+                        </button>
+                      ) : null}
+                    </div>
                     {u.title ? (
                       <h3 className="mt-1 text-base font-semibold text-amber-950">{u.title}</h3>
                     ) : null}

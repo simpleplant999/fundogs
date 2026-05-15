@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -104,6 +105,16 @@ export class CampaignsController {
       body: dto.body,
       imageUrls: dto.imageUrls,
     });
+  }
+
+  @Delete('me/:id/updates/:updateId')
+  @UseGuards(AuthGuard('jwt'))
+  deleteMyUpdate(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Param('updateId') updateId: string,
+  ) {
+    return this.campaigns.deleteCampaignUpdate(user.sub, user.role, id, updateId);
   }
 
   @Post()
@@ -221,6 +232,7 @@ export class CampaignsController {
       trackingNumber: dto.trackingNumber,
       branch: dto.branch,
       fundraisingReference: dto.fundraisingReference,
+      hideAmount: dto.hideAmount,
     });
   }
 }

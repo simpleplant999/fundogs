@@ -1,5 +1,3 @@
-- Add timeline / Updates- updates on the campaign, the user can do this either on my campaigns or do it directly to campaign view
-
 - Add top 3 donator with crown or cup
 
 - Add categories eg. Donation, rehoming, medication etc

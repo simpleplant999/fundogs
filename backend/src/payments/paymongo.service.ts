@@ -5,6 +5,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  hideAmountPublicMetadataValue,
+} from '../campaigns/donation-hide-amount.util';
 
 const PAYMONGO_API = 'https://api.paymongo.com/v1';
 
@@ -84,6 +87,7 @@ export class PaymongoService {
     donorDisplayName: string;
     billingEmail: string;
     billingPhone: string;
+    hideAmountPublic?: boolean;
   }): Promise<{ paymentIntentId: string; clientKey: string; qrImageUrl: string }> {
     const units = this.amountToPaymongoUnits(opts.amountPhp);
     if (!Number.isFinite(units) || units < 2000) {
@@ -94,6 +98,7 @@ export class PaymongoService {
       campaign_slug: opts.campaignSlug,
       donor_display_name: opts.donorDisplayName.slice(0, 200),
       donation_channel: 'qrph',
+      hide_amount_public: hideAmountPublicMetadataValue(opts.hideAmountPublic),
     };
 
     const piJson = await this.request('POST', '/payment_intents', {
@@ -160,6 +165,7 @@ export class PaymongoService {
     campaignSlug: string;
     campaignTitle: string;
     donorDisplayName: string;
+    hideAmountPublic?: boolean;
   }): Promise<{ paymentIntentId: string; clientKey: string }> {
     const sk = this.secretKey();
     if (!sk.startsWith('sk_test_')) {
@@ -174,6 +180,7 @@ export class PaymongoService {
       campaign_slug: opts.campaignSlug,
       donor_display_name: opts.donorDisplayName.slice(0, 200),
       donation_channel: 'card',
+      hide_amount_public: hideAmountPublicMetadataValue(opts.hideAmountPublic),
     };
 
     const piJson = await this.request('POST', '/payment_intents', {

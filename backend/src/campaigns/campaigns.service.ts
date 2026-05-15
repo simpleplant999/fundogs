@@ -300,6 +300,26 @@ export class CampaignsService {
     return mapCampaignUpdate(row);
   }
 
+  /** Campaign author or platform admin may remove an update. */
+  async deleteCampaignUpdate(
+    userId: string,
+    userRole: UserRole,
+    campaignId: string,
+    updateId: string,
+  ): Promise<void> {
+    const row = await this.prisma.campaignUpdate.findUnique({ where: { id: updateId } });
+    if (!row) throw new NotFoundException('Update not found');
+    if (row.campaignId !== campaignId) {
+      throw new BadRequestException('Update does not belong to this campaign');
+    }
+    const c = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!c) throw new NotFoundException('Campaign not found');
+    const isAdmin = userRole === UserRole.ADMIN;
+    const isAuthor = c.authorId === userId;
+    if (!isAdmin && !isAuthor) throw new ForbiddenException('Not allowed to delete this update');
+    await this.prisma.campaignUpdate.delete({ where: { id: updateId } });
+  }
+
   async getComments(slug: string, viewer?: JwtUserPayload): Promise<ApiComment[]> {
     const c = await this.getCampaignRowBySlug(slug);
     if (!canViewCampaign(c, viewer)) throw new NotFoundException();
@@ -338,7 +358,7 @@ export class CampaignsService {
 
   async createDonationCheckoutSession(
     slug: string,
-    dto: { donorDisplayName: string; amount: number },
+    dto: { donorDisplayName: string; amount: number; hideAmount?: boolean },
   ): Promise<{ url: string }> {
     const c = await this.getCampaignRowBySlug(slug);
     if (!isPublicVisible(c)) {
@@ -349,13 +369,14 @@ export class CampaignsService {
       campaignTitle: c.title,
       donorDisplayName: dto.donorDisplayName.trim(),
       amountPhp: dto.amount,
+      hideAmountPublic: dto.hideAmount === true,
     });
     return { url };
   }
 
   async createDonationPaymentIntent(
     slug: string,
-    dto: { donorDisplayName: string; amount: number },
+    dto: { donorDisplayName: string; amount: number; hideAmount?: boolean },
   ): Promise<{ clientSecret: string }> {
     const c = await this.getCampaignRowBySlug(slug);
     if (!isPublicVisible(c)) {
@@ -366,6 +387,7 @@ export class CampaignsService {
       campaignTitle: c.title,
       donorDisplayName: dto.donorDisplayName.trim(),
       amountPhp: dto.amount,
+      hideAmountPublic: dto.hideAmount === true,
     });
   }
 
@@ -408,6 +430,7 @@ export class CampaignsService {
       amount: number;
       billingEmail?: string;
       billingPhone?: string;
+      hideAmount?: boolean;
     },
   ): Promise<{ paymentIntentId: string; clientKey: string; qrImageUrl: string }> {
     const c = await this.getCampaignRowBySlug(slug);
@@ -425,6 +448,7 @@ export class CampaignsService {
       donorDisplayName: dto.donorDisplayName.trim(),
       billingEmail: email,
       billingPhone: phone,
+      hideAmountPublic: dto.hideAmount === true,
     });
   }
 
@@ -436,6 +460,7 @@ export class CampaignsService {
       amount: number;
       billingEmail?: string;
       billingPhone?: string;
+      hideAmount?: boolean;
     },
   ): Promise<{ paymentIntentId: string; clientKey: string }> {
     const c = await this.getCampaignRowBySlug(slug);
@@ -447,6 +472,7 @@ export class CampaignsService {
       campaignSlug: c.slug,
       campaignTitle: c.title,
       donorDisplayName: dto.donorDisplayName.trim(),
+      hideAmountPublic: dto.hideAmount === true,
     });
   }
 
@@ -483,6 +509,7 @@ export class CampaignsService {
       trackingNumber: string;
       branch: string;
       fundraisingReference: string;
+      hideAmount?: boolean;
     },
   ): Promise<ApiDonor> {
     const c = await this.getCampaignRowBySlug(slug);
@@ -498,6 +525,7 @@ export class CampaignsService {
         branch: dto.branch,
         fundraisingReference: dto.fundraisingReference,
         verificationStatus: DonationVerificationStatus.PENDING,
+        hideAmountPublic: dto.hideAmount === true,
       },
     });
     return mapDonation(d);

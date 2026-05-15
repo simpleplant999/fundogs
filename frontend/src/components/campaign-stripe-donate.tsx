@@ -113,6 +113,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
   const { user, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [donateAnonymously, setDonateAnonymously] = useState(false);
+  const [hideDonationAmount, setHideDonationAmount] = useState(false);
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -157,6 +158,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
         body: JSON.stringify({
           donorDisplayName: resolveDonorDisplayName(name, donateAnonymously),
           amount: amt,
+          hideAmount: hideDonationAmount,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { clientSecret?: string };
@@ -197,6 +199,7 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
         body: JSON.stringify({
           donorDisplayName: resolveDonorDisplayName(name, donateAnonymously),
           amount: amt,
+          hideAmount: hideDonationAmount,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string };
@@ -243,6 +246,14 @@ export function CampaignStripeDonate({ slug, api, onSuccess }: Props) {
           description="Your gift will appear as Anonymous on the donor list."
           checked={donateAnonymously}
           onCheckedChange={setDonateAnonymously}
+          disabled={!!clientSecret || busy}
+        />
+        <ToggleSwitch
+          id="stripe-donate-hide-amount"
+          label="Hide donation amount"
+          description="Show ***** instead of the amount on the public donor list. Your gift still counts toward the goal."
+          checked={hideDonationAmount}
+          onCheckedChange={setHideDonationAmount}
           disabled={!!clientSecret || busy}
         />
         {!donateAnonymously ? (

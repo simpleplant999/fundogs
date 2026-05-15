@@ -56,7 +56,12 @@ export function DonorsList({ donors }: { donors: Donor[] }) {
             <p className="text-xs text-amber-950/60">{formatDonorDate(d.date)}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-teal-800">{formatPhp(d.amount)}</span>
+            <span
+              className="font-semibold text-teal-800 tracking-widest"
+              aria-label={d.hideAmount || d.amount == null ? "Amount hidden by donor" : undefined}
+            >
+              {d.hideAmount || d.amount == null ? "*****" : formatPhp(d.amount)}
+            </span>
             {d.verification === "verified" ? (
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
                 Verified

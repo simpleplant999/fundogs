@@ -9,3 +9,4 @@
 - On homepage, fundraising campaign Make it 3 columns and 2 rows 
 - Allow campaign creator to withdraw the money to his/her bank account (bank account should be entered on the platform and only admin and the creator can view) - This is a manual process for now to request for withdrawal then manually updates the request on that campaign and align the current balance and status - Add bank details (Name, Bank Name, Account Number)
 - Make the nav mobile responsive, make it a burger
+- Add timeline / Updates- updates on the campaign, the user can do this either on my campaigns or do it directly to campaign view

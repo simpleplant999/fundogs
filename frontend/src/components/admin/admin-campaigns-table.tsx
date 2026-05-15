@@ -3,9 +3,15 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { CampaignAuthorProfileLink } from '@/components/campaign-author-profile-link';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
 import { CampaignImagesEditor } from '@/components/campaign-images-editor';
 import { CampaignListThumb } from '@/components/campaign-list-thumb';
+import { CampaignPaymongoDonate } from '@/components/campaign-paymongo-donate';
+import { CampaignShareMenu } from '@/components/campaign-share-menu';
+import { CampaignUpdatesPanel } from '@/components/campaigns/campaign-updates-panel';
+import { DonorsList } from '@/components/donors-list';
+import { OrganizationVerifiedBadge } from '@/components/organization-verified-badge';
 import { ProgressBar } from '@/components/progress-bar';
 import { getCampaignImages } from '@/lib/campaign-images';
 import {
@@ -14,6 +20,7 @@ import {
   parseGoalAmountInput,
 } from '@/lib/goal-amount-input';
 import { formatPhp } from '@/lib/format-currency';
+import type { Donor } from '@/lib/types';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
 export type AdminCampaignTableRow = {
@@ -50,6 +57,20 @@ export function isActiveCampaign(r: AdminCampaignTableRow) {
   );
 }
 
+function canShowDonateWidgetPreview(r: AdminCampaignTableRow): boolean {
+  return isActiveCampaign(r);
+}
+
+function PreviewStatusLine({ status }: { status: string }) {
+  const copy: Record<string, string> = {
+    Published: 'Live — accepting donations.',
+    Draft: 'Draft — visible to you and moderators until approved.',
+    Archived: 'Archived — historical record; donations are closed.',
+    Done: 'Done — goal reached; thank you to everyone who gave.',
+  };
+  return <p className="text-sm font-medium text-amber-950/80">{copy[status] ?? status}</p>;
+}
+
 export function AdminCampaignsTable({ showHeading = true }: Props) {
   const headingId = useId();
   const { token, user, loading } = useAuth();
@@ -69,6 +90,7 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [previewDonors, setPreviewDonors] = useState<Donor[]>([]);
 
   const load = useCallback(async () => {
     if (!api || !token) return;
@@ -97,6 +119,23 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
     setEditRecipientNote(editRow.recipientNote);
     setEditError(null);
   }, [editRow]);
+
+  const refetchPreviewDonors = useCallback(async () => {
+    if (!api || !token || !preview) return;
+    const res = await fetch(`${api}/campaigns/${encodeURIComponent(preview.slug)}/donors`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    setPreviewDonors((await res.json()) as Donor[]);
+  }, [api, token, preview]);
+
+  useEffect(() => {
+    if (!preview) {
+      setPreviewDonors([]);
+      return;
+    }
+    void refetchPreviewDonors();
+  }, [preview?.id, preview?.slug, refetchPreviewDonors]);
 
   const modalOpen = !!(preview || editRow || deleteRow);
 
@@ -354,7 +393,7 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
 
       {preview ? (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-amber-950/40 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-amber-950/40 p-4 py-8 backdrop-blur-[2px] sm:p-6 sm:py-10"
           role="presentation"
           onClick={() => setPreview(null)}
         >
@@ -362,100 +401,181 @@ export function AdminCampaignsTable({ showHeading = true }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${headingId}-modal-title`}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-amber-900/15 bg-[#fffaf3] p-6 shadow-xl"
+            className="relative w-full max-w-6xl rounded-2xl border border-amber-900/15 bg-[#fffaf3] shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-3">
-              <h3 id={`${headingId}-modal-title`} className="text-xl font-bold text-amber-950">
-                {preview.title}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setPreview(null)}
-                className="shrink-0 rounded-full px-2 py-1 text-sm text-amber-950/70 hover:bg-amber-900/10"
-                aria-label="Close preview"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-amber-950/60">
-              {preview.author?.fullName} · {preview.author?.email} · /{preview.slug}
-            </p>
-            <div className="mt-4">
-              <CampaignImageCarousel
-                images={getCampaignImages(preview)}
-                alt=""
-                aspectClass="aspect-[16/10]"
-              />
-            </div>
-            <p className="mt-4 whitespace-pre-wrap text-sm text-amber-950/85">{preview.description}</p>
-            <div className="mt-4 rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-end justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => setPreview(null)}
+              className="absolute right-3 top-3 z-10 rounded-full bg-[#fffaf3]/90 px-2.5 py-1 text-sm text-amber-950/80 shadow-sm ring-1 ring-amber-900/10 hover:bg-white hover:text-amber-950"
+              aria-label="Close preview"
+            >
+              ✕
+            </button>
+            <article className="px-4 pb-6 pt-12 sm:px-6 sm:pb-8 sm:pt-14">
+              <p className="mb-4 text-xs text-amber-950/55">
+                Preview as supporters see it · {preview.author?.fullName ?? '—'}
+                {preview.author?.email ? ` · ${preview.author.email}` : ''} · /{preview.slug}
+              </p>
+              <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Raised</p>
-                  <p className="text-2xl font-bold text-teal-800">{formatPhp(preview.raisedAmount)}</p>
+                  <CampaignImageCarousel
+                    images={getCampaignImages(preview)}
+                    alt=""
+                    aspectClass="aspect-[16/9]"
+                    className="rounded-3xl border border-amber-900/10 shadow-sm"
+                  />
+                  <div className="mt-6 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 ring-1 ring-amber-600/25">
+                      {preview.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+                    <h1
+                      id={`${headingId}-modal-title`}
+                      className="min-w-0 flex-1 pr-10 text-2xl font-bold tracking-tight text-amber-950 sm:text-3xl lg:pr-0"
+                    >
+                      {preview.title}
+                    </h1>
+                    <CampaignShareMenu slug={preview.slug} title={preview.title} />
+                  </div>
+                  <PreviewStatusLine status={preview.status} />
+                  {preview.author ? (
+                    <div className="mt-4 space-y-2 text-sm text-amber-950/75">
+                      <p>
+                        <span className="font-medium text-amber-950/55">Creator</span>{' '}
+                        <CampaignAuthorProfileLink
+                          campaign={{
+                            slug: preview.slug,
+                            authorId: preview.author.id,
+                            author: {
+                              id: preview.author.id,
+                              fullName: preview.author.fullName,
+                              organization: preview.author.organization ?? null,
+                            },
+                          }}
+                          className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
+                        />
+                      </p>
+                      {preview.author.organization ? (
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-medium text-amber-950/55">Organization</span>
+                          <Link
+                            href={`/organizations/${encodeURIComponent(preview.author.organization.slug)}`}
+                            className="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900"
+                          >
+                            {preview.author.organization.name}
+                          </Link>
+                          <OrganizationVerifiedBadge compact />
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <p className="mt-5 text-lg leading-relaxed text-amber-950/85">{preview.description}</p>
+                  <div className="mt-8 rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm">
+                    <div className="flex flex-wrap items-end justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Raised</p>
+                        <p className="text-2xl font-bold text-teal-800">{formatPhp(preview.raisedAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Goal</p>
+                        <p className="text-xl font-semibold text-amber-950">{formatPhp(preview.goalAmount)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <ProgressBar raised={preview.raisedAmount} goal={preview.goalAmount} />
+                    </div>
+                  </div>
+                  {api ? (
+                    <CampaignUpdatesPanel
+                      slug={preview.slug}
+                      campaignId={preview.id}
+                      api={api}
+                      token={token}
+                      canPost={!!user?.id && !!preview.author?.id && user.id === preview.author.id}
+                    />
+                  ) : null}
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-950/55">Goal</p>
-                  <p className="text-xl font-semibold text-amber-950">{formatPhp(preview.goalAmount)}</p>
-                </div>
+
+                <aside className="space-y-8 lg:pt-2">
+                  {api && canShowDonateWidgetPreview(preview) ? (
+                    <CampaignPaymongoDonate
+                      slug={preview.slug}
+                      api={api}
+                      campaignTitle={preview.title}
+                      campaignDescription={preview.description}
+                      onPaid={() => {
+                        void load();
+                        void refetchPreviewDonors();
+                      }}
+                    />
+                  ) : null}
+                  <section>
+                    <h2 className="text-xl font-bold text-amber-950">Recent donors</h2>
+                    <div className="mt-4">
+                      <DonorsList donors={previewDonors} />
+                    </div>
+                  </section>
+                  <section className="rounded-2xl border border-amber-900/10 bg-white p-4 shadow-sm">
+                    <h2 className="text-sm font-bold uppercase tracking-wide text-amber-950/70">Moderator</h2>
+                    <dl className="mt-3 space-y-2 text-sm">
+                      <div className="flex justify-between gap-4 border-t border-amber-900/10 pt-3 first:border-t-0 first:pt-0">
+                        <dt className="text-amber-950/60">Recipient</dt>
+                        <dd className="text-right font-medium text-amber-950">{preview.recipientName}</dd>
+                      </div>
+                      <div className="flex flex-col gap-1 border-t border-amber-900/10 pt-3">
+                        <dt className="text-amber-950/60">Recipient note</dt>
+                        <dd className="text-amber-950/85">{preview.recipientNote || '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4 border-t border-amber-900/10 pt-3">
+                        <dt className="text-amber-950/60">Approval</dt>
+                        <dd className="font-medium text-amber-950">{approvalLabel(preview.approvalStatus)}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                </aside>
               </div>
-              <div className="mt-4">
-                <ProgressBar raised={preview.raisedAmount} goal={preview.goalAmount} />
-              </div>
-            </div>
-            <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between gap-4 border-t border-amber-900/10 pt-3">
-                <dt className="text-amber-950/60">Recipient</dt>
-                <dd className="text-right font-medium text-amber-950">{preview.recipientName}</dd>
-              </div>
-              <div className="flex flex-col gap-1 border-t border-amber-900/10 pt-3">
-                <dt className="text-amber-950/60">Recipient note</dt>
-                <dd className="text-amber-950/85">{preview.recipientNote || '—'}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-amber-950/60">Approval</dt>
-                <dd className="font-medium text-amber-950">{approvalLabel(preview.approvalStatus)}</dd>
-              </div>
-            </dl>
-            <div className="mt-6 flex flex-wrap gap-2 border-t border-amber-900/10 pt-4">
-              <Link
-                href={`/campaigns/${preview.slug}`}
-                className="rounded-full px-4 py-2 text-sm font-medium text-teal-800 underline"
-              >
-                Open campaign page
-              </Link>
-              {preview.approvalStatus === 'pending' ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => void act(preview.id, 'approve')}
-                    className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
-                  >
-                    Approve &amp; publish
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void act(preview.id, 'reject')}
-                    className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-950 ring-1 ring-amber-900/20 hover:bg-amber-200"
-                  >
-                    Reject
-                  </button>
-                </>
-              ) : null}
-              {isActiveCampaign(preview) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditRow(preview);
-                    setPreview(null);
-                  }}
-                  className="rounded-full bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300"
+
+              <div className="mt-8 flex flex-wrap gap-2 border-t border-amber-900/10 pt-6">
+                <Link
+                  href={`/campaigns/${preview.slug}`}
+                  className="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800"
                 >
-                  Edit campaign
-                </button>
-              ) : null}
-            </div>
+                  Open live page
+                </Link>
+                {preview.approvalStatus === 'pending' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void act(preview.id, 'approve')}
+                      className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+                    >
+                      Approve &amp; publish
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void act(preview.id, 'reject')}
+                      className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-950 ring-1 ring-amber-900/20 hover:bg-amber-200"
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : null}
+                {isActiveCampaign(preview) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditRow(preview);
+                      setPreview(null);
+                    }}
+                    className="rounded-full bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300"
+                  >
+                    Edit campaign
+                  </button>
+                ) : null}
+              </div>
+            </article>
           </div>
         </div>
       ) : null}

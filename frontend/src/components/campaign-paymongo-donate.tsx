@@ -218,6 +218,7 @@ export function CampaignPaymongoDonate({
   const { user, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [donateAnonymously, setDonateAnonymously] = useState(false);
+  const [hideDonationAmount, setHideDonationAmount] = useState(false);
   const [amount, setAmount] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -336,7 +337,7 @@ export function CampaignPaymongoDonate({
     paidNotifiedRef.current = false;
     setBusy(true);
     try {
-      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt };
+      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt, hideAmount: hideDonationAmount };
       if (email.trim()) body.billingEmail = email.trim();
       if (phone.trim()) body.billingPhone = phone.trim();
       const res = await fetch(`${donationsPath}/paymongo-qr`, {
@@ -401,7 +402,7 @@ export function CampaignPaymongoDonate({
     paidNotifiedRef.current = false;
     setBusy(true);
     try {
-      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt };
+      const body: Record<string, unknown> = { donorDisplayName: nm, amount: amt, hideAmount: hideDonationAmount };
       if (email.trim()) body.billingEmail = email.trim();
       if (phone.trim()) body.billingPhone = phone.trim();
       const res = await fetch(`${donationsPath}/paymongo-card`, {
@@ -537,6 +538,14 @@ export function CampaignPaymongoDonate({
           description="Your gift will appear as Anonymous on the donor list."
           checked={donateAnonymously}
           onCheckedChange={setDonateAnonymously}
+          disabled={busy}
+        />
+        <ToggleSwitch
+          id="donate-hide-amount"
+          label="Hide donation amount"
+          description="Show ***** instead of the amount on the public donor list. Your gift still counts toward the goal."
+          checked={hideDonationAmount}
+          onCheckedChange={setHideDonationAmount}
           disabled={busy}
         />
         {!donateAnonymously ? (

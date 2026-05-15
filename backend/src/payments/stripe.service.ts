@@ -5,6 +5,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
+import {
+  hideAmountPublicMetadataValue,
+} from '../campaigns/donation-hide-amount.util';
 
 @Injectable()
 export class StripeService {
@@ -36,6 +39,7 @@ export class StripeService {
     campaignTitle: string;
     donorDisplayName: string;
     amountPhp: number;
+    hideAmountPublic?: boolean;
   }): Promise<string> {
     const frontend = this.publicFrontendBaseUrl();
     const slugEnc = encodeURIComponent(opts.campaignSlug);
@@ -43,6 +47,7 @@ export class StripeService {
     if (!Number.isFinite(unitAmount) || unitAmount < 1) {
       throw new InternalServerErrorException('Invalid amount for Stripe');
     }
+    const hideMeta = hideAmountPublicMetadataValue(opts.hideAmountPublic);
     const session = await this.getStripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -61,12 +66,14 @@ export class StripeService {
       metadata: {
         campaign_slug: opts.campaignSlug,
         donor_display_name: opts.donorDisplayName.slice(0, 200),
+        hide_amount_public: hideMeta,
       },
       /** Session metadata is NOT copied onto the PaymentIntent — webhooks often only receive `payment_intent.succeeded`. */
       payment_intent_data: {
         metadata: {
           campaign_slug: opts.campaignSlug,
           donor_display_name: opts.donorDisplayName.slice(0, 200),
+          hide_amount_public: hideMeta,
         },
       },
       success_url: `${frontend}/campaigns/${slugEnc}?donated=stripe&session_id={CHECKOUT_SESSION_ID}`,
@@ -83,11 +90,13 @@ export class StripeService {
     campaignTitle: string;
     donorDisplayName: string;
     amountPhp: number;
+    hideAmountPublic?: boolean;
   }): Promise<{ clientSecret: string }> {
     const unitAmount = Math.round(opts.amountPhp * 100);
     if (!Number.isFinite(unitAmount) || unitAmount < 1) {
       throw new InternalServerErrorException('Invalid amount for Stripe');
     }
+    const hideMeta = hideAmountPublicMetadataValue(opts.hideAmountPublic);
     const pi = await this.getStripe().paymentIntents.create({
       amount: unitAmount,
       currency: 'php',
@@ -95,6 +104,7 @@ export class StripeService {
       metadata: {
         campaign_slug: opts.campaignSlug,
         donor_display_name: opts.donorDisplayName.slice(0, 200),
+        hide_amount_public: hideMeta,
       },
       description: `Donation — ${opts.campaignTitle}`.slice(0, 500),
     });
