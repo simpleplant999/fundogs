@@ -51,11 +51,7 @@ export function ContactForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const base = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? '');
-    if (!base) {
-      setError('This site is missing NEXT_PUBLIC_API_URL, so messages cannot be sent yet.');
-      return;
-    }
+    const base = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? "/api");
     setSubmitting(true);
     try {
       const res = await fetch(`${base}/contact`, {

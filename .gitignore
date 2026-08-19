@@ -16,6 +16,7 @@ backend/.turbo/
 
 # uploads & local db
 backend/uploads/
+frontend/public/uploads/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 
