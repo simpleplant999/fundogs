@@ -16,7 +16,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex min-h-0 w-full flex-col border-b border-amber-900/20 bg-amber-950 text-amber-50 lg:min-h-0 lg:overflow-hidden lg:border-b-0 lg:border-r">
+    <aside className="flex h-full min-h-0 w-full flex-col border-b border-amber-900/20 bg-amber-950 text-amber-50 lg:border-b-0 lg:border-r">
       <div className="shrink-0 px-4 py-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-amber-200/90">FunDogs</p>
         <p className="mt-1 text-lg font-bold text-white">Admin</p>

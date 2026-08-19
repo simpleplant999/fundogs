@@ -13,13 +13,21 @@ export function getCampaignImages(c: Pick<Campaign, 'images' | 'imageUrl'>): str
  */
 export function resolveMediaUrlToApiOrigin(apiBase: string, url: string): string {
   const raw = url.trim();
-  if (!raw || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
-  const base = apiBase.trim().replace(/\/+$/, '');
+  if (!raw || raw.startsWith("blob:") || raw.startsWith("data:")) return raw;
+  const base = apiBase.trim().replace(/\/+$/, "");
   if (!base) return raw;
   try {
-    const api = new URL(base.includes('://') ? base : `https://${base}`);
+    // Same-origin relative API base (`/api`) — keep absolute media URLs, prefix paths with window origin in browser.
+    if (!base.includes("://") && base.startsWith("/")) {
+      if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+      if (typeof window !== "undefined") {
+        return raw.startsWith("/") ? `${window.location.origin}${raw}` : raw;
+      }
+      return raw;
+    }
+    const api = new URL(base.includes("://") ? base : `https://${base}`);
     const origin = `${api.protocol}//${api.host}`;
-    if (raw.startsWith('/')) {
+    if (raw.startsWith("/")) {
       return `${origin}${raw}`;
     }
     const u = new URL(raw);
