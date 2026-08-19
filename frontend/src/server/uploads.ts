@@ -1,10 +1,8 @@
-import { randomUUID } from "crypto";
-import { existsSync, mkdirSync } from "fs";
-import { writeFile } from "fs/promises";
-import { extname, join } from "path";
+import { prisma } from "./db";
 
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
-const MAX_BYTES = 5 * 1024 * 1024;
+/** Stay under Vercel’s ~4.5MB request body limit. */
+const MAX_BYTES = 4 * 1024 * 1024;
 
 export function isAllowedImageFile(file: File): boolean {
   const mime = (file.type || "").toLowerCase();
@@ -17,31 +15,47 @@ export function isAllowedImageFile(file: File): boolean {
 
 export type UploadSubdir = "campaigns" | "users" | "organizations";
 
-export function publicUploadUrl(_request: Request, subdir: UploadSubdir, filename: string) {
-  return `/uploads/${subdir}/${filename}`;
+function mimeOf(file: File): string {
+  const mime = (file.type || "").toLowerCase();
+  if (mime.startsWith("image/")) return mime;
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".gif")) return "image/gif";
+  if (name.endsWith(".webp")) return "image/webp";
+  if (name.endsWith(".avif")) return "image/avif";
+  return "image/jpeg";
 }
 
-/** Save under `public/uploads/<subdir>` so Next can serve at `/uploads/...`. */
+/** Public path stored on campaigns / profiles. */
+export function mediaUrl(id: string) {
+  return `/api/media/${id}`;
+}
+
+/**
+ * Persist images in MongoDB so uploads work on Vercel (read-only filesystem).
+ * Returns public URLs (`/api/media/:id`).
+ */
 export async function saveUploadedImages(
   files: File[],
   subdir: UploadSubdir,
 ): Promise<string[]> {
-  const dir = join(process.cwd(), "public", "uploads", subdir);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-
-  const names: string[] = [];
+  const urls: string[] = [];
   for (const file of files) {
     if (!isAllowedImageFile(file)) {
       throw new Error("Only image uploads are allowed");
     }
     if (file.size > MAX_BYTES) {
-      throw new Error("Each image must be 5MB or smaller");
+      throw new Error("Each image must be 4MB or smaller");
     }
-    const ext = extname(file.name) || ".jpg";
-    const filename = `${randomUUID()}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(join(dir, filename), buffer);
-    names.push(filename);
+    const row = await prisma.uploadedFile.create({
+      data: {
+        subdir,
+        mimeType: mimeOf(file),
+        data: buffer,
+      },
+    });
+    urls.push(mediaUrl(row.id));
   }
-  return names;
+  return urls;
 }

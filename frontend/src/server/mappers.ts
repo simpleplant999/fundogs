@@ -73,7 +73,9 @@ function toPublicMediaUrl(url: string): string {
   if (raw.startsWith("/")) return raw;
   try {
     const u = new URL(raw);
-    if (u.pathname.startsWith("/uploads/")) return `${u.pathname}${u.search}`;
+    if (u.pathname.startsWith("/uploads/") || u.pathname.startsWith("/api/media/")) {
+      return `${u.pathname}${u.search}`;
+    }
     return raw;
   } catch {
     return raw;

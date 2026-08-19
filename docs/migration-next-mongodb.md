@@ -32,7 +32,7 @@ Prisma **7 does not support MongoDB yet** — this app pins `@prisma/client` / `
 - Point Stripe/PayMongo webhook URLs at the Next deploy:  
   `https://YOUR_DOMAIN/api/webhooks/stripe` and `.../paymongo`
 - Mobile app: set API URL to the Next origin + `/api`
-- Uploads live on local/ephemeral disk under `public/uploads/` — use object storage for production
+- Uploads are stored in MongoDB and served from `/api/media/:id` (works on Vercel). Keep files under 4MB.
 
 ## Local setup
 

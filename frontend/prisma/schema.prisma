@@ -213,3 +213,12 @@ model Donation {
   hideAmountPublic        Boolean                    @default(false)
   createdAt               DateTime                   @default(now())
 }
+
+/** Image bytes for Vercel (no writable `public/uploads`). Served at GET /api/media/:id */
+model UploadedFile {
+  id        String   @id @default(uuid()) @map("_id")
+  subdir    String
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+}

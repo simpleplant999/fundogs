@@ -1,4 +1,5 @@
 import { AuthHttpError, login } from "@/server/auth/service";
+import { withDbTimeout } from "@/server/db";
 import { jsonError, jsonOk, readJsonBody } from "@/server/http";
 
 export async function POST(request: Request) {
@@ -10,7 +11,9 @@ export async function POST(request: Request) {
     return jsonError("Database is not configured (missing DATABASE_URL).", 503);
   }
   try {
-    const result = await login(body.email.trim().toLowerCase(), body.password);
+    const result = await withDbTimeout(
+      login(body.email.trim().toLowerCase(), body.password),
+    );
     return jsonOk(result);
   } catch (e) {
     if (e instanceof AuthHttpError) return jsonError(e.message, e.status);

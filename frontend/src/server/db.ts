@@ -25,3 +25,24 @@ export const prisma =
   });
 
 globalForPrisma.prisma = prisma;
+
+/** Fail an API handler if Prisma/Mongo never answers (Atlas IP block hangs otherwise). */
+export async function withDbTimeout<T>(work: Promise<T>, ms = 8000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(
+            new Error(
+              "Database connection timed out. In MongoDB Atlas → Network Access, allow 0.0.0.0/0. On Vercel, set DATABASE_URL (with /fundogs in the path) for Production and redeploy.",
+            ),
+          );
+        }, ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}

@@ -130,7 +130,7 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
           ))}
         </ul>
       ) : null}
-      <p className="text-xs text-amber-950/55">Up to {MAX} images. First image is the main thumbnail.</p>
+      <p className="text-xs text-amber-950/55">Up to {MAX} images, 4MB each. First image is the main thumbnail.</p>
       <ImageLightbox
         state={stripLightbox}
         onClose={close}

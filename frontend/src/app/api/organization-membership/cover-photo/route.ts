@@ -1,7 +1,7 @@
 import { requireUser } from "@/server/auth/jwt";
 import { OrgHttpError, setOrgCoverPhotoUrl } from "@/server/organizations/service";
 import { jsonError, jsonOk } from "@/server/http";
-import { publicUploadUrl, saveUploadedImages } from "@/server/uploads";
+import { saveUploadedImages } from "@/server/uploads";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,13 +23,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [filename] = await saveUploadedImages([file], "organizations");
-    const url = publicUploadUrl(request, "organizations", filename);
+    const [url] = await saveUploadedImages([file], "organizations");
     return jsonOk(await setOrgCoverPhotoUrl(user.sub, url));
   } catch (e) {
     if (e instanceof OrgHttpError) return jsonError(e.message, e.status);
     const message = e instanceof Error ? e.message : "Upload failed";
-    if (message.includes("image") || message.includes("5MB")) {
+    if (message.includes("image") || message.includes("4MB") || message.includes("5MB")) {
       return jsonError(message, 400);
     }
     console.error(e);

@@ -1,9 +1,10 @@
 import { requireUser } from "@/server/auth/jwt";
 import { jsonError, jsonOk } from "@/server/http";
-import { publicUploadUrl, saveUploadedImages } from "@/server/uploads";
+import { saveUploadedImages } from "@/server/uploads";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const user = await requireUser(request);
@@ -23,16 +24,14 @@ export async function POST(request: Request) {
   if (!files.length) return jsonError("Add at least one image", 400);
 
   try {
-    const filenames = await saveUploadedImages(files.slice(0, 12), "campaigns");
-    return jsonOk({
-      urls: filenames.map((name) => publicUploadUrl(request, "campaigns", name)),
-    });
+    const urls = await saveUploadedImages(files.slice(0, 12), "campaigns");
+    return jsonOk({ urls });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Upload failed";
-    if (message.includes("image") || message.includes("5MB")) {
+    if (message.includes("image") || message.includes("4MB") || message.includes("5MB")) {
       return jsonError(message, 400);
     }
     console.error(e);
-    return jsonError("Upload failed", 500);
+    return jsonError(message || "Upload failed", 500);
   }
 }
