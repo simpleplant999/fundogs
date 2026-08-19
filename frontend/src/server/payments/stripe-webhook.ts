@@ -39,7 +39,7 @@ async function onPaymentIntentSucceeded(
   if (pi.amount == null) return;
   const amountPhp = pi.amount / 100;
 
-  const existing = await prisma.donation.findUnique({
+  const existing = await prisma.donation.findFirst({
     where: { stripePaymentIntentId: pi.id },
   });
   if (existing) return;
@@ -64,7 +64,7 @@ async function onPaymentIntentSucceeded(
   }
 
   await prisma.$transaction(async (tx) => {
-    const dup = await tx.donation.findUnique({ where: { stripePaymentIntentId: pi.id } });
+    const dup = await tx.donation.findFirst({ where: { stripePaymentIntentId: pi.id } });
     if (dup) return;
     await tx.donation.create({
       data: {
@@ -126,13 +126,13 @@ async function onCheckoutSessionCompleted(
       ? session.payment_intent
       : (session.payment_intent?.id ?? "");
 
-  const existing = await prisma.donation.findUnique({
+  const existing = await prisma.donation.findFirst({
     where: { stripeCheckoutSessionId: session.id },
   });
   if (existing) return;
 
   if (piId) {
-    const wonByPi = await prisma.donation.findUnique({
+    const wonByPi = await prisma.donation.findFirst({
       where: { stripePaymentIntentId: piId },
     });
     if (wonByPi) {
@@ -164,7 +164,7 @@ async function onCheckoutSessionCompleted(
   }
 
   await prisma.$transaction(async (tx) => {
-    const dup = await tx.donation.findUnique({ where: { stripeCheckoutSessionId: session.id } });
+    const dup = await tx.donation.findFirst({ where: { stripeCheckoutSessionId: session.id } });
     if (dup) return;
     await tx.donation.create({
       data: {

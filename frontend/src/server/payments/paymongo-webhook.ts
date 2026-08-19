@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "../db";
 import { parseHideAmountPublicMetadata } from "../donations/hide-amount";
+import { isPrismaUniqueConflict } from "../prisma-errors";
 import { PaymentHttpError } from "./errors";
 import {
   retrievePaymentIntent,
@@ -109,7 +110,7 @@ export async function recordDonationIfSucceededIntent(opts: {
 }): Promise<"created" | "exists" | "skipped"> {
   const { paymentIntentId, paidAt } = opts;
 
-  const existing = await prisma.donation.findUnique({
+  const existing = await prisma.donation.findFirst({
     where: { paymongoPaymentIntentId: paymentIntentId },
   });
   if (existing) return "exists";
@@ -156,13 +157,8 @@ export async function recordDonationIfSucceededIntent(opts: {
     return "skipped";
   }
 
-  let inserted = false;
-  await prisma.$transaction(async (tx) => {
-    const dup = await tx.donation.findUnique({
-      where: { paymongoPaymentIntentId: paymentIntentId },
-    });
-    if (dup) return;
-    await tx.donation.create({
+  try {
+    await prisma.donation.create({
       data: {
         campaignId: campaign.id,
         donorDisplayName: donorName,
@@ -176,16 +172,18 @@ export async function recordDonationIfSucceededIntent(opts: {
         createdAt,
       },
     });
-    await tx.campaign.update({
-      where: { id: campaign.id },
-      data: { raisedAmount: { increment: amountPhp } },
-    });
-    inserted = true;
-  });
-  if (!inserted) {
-    console.log(`PayMongo donation already present for ${paymentIntentId} (race)`);
-    return "exists";
+  } catch (e) {
+    if (isPrismaUniqueConflict(e)) {
+      console.log(`PayMongo donation already present for ${paymentIntentId}`);
+      return "exists";
+    }
+    throw e;
   }
+
+  await prisma.campaign.update({
+    where: { id: campaign.id },
+    data: { raisedAmount: { increment: amountPhp } },
+  });
   console.log(`Recorded PayMongo donation ${paymentIntentId} campaign ${slug}`);
   return "created";
 }

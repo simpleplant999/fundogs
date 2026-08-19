@@ -14,6 +14,7 @@ export async function POST(request: Request) {
   } catch (e) {
     if (e instanceof PaymentHttpError) return jsonError(e.message, e.status);
     console.error(e);
-    return jsonError("Failed to sync support PayMongo donation", 500);
+    const message = e instanceof Error ? e.message : "Failed to sync support PayMongo donation";
+    return jsonError(message, 500);
   }
 }

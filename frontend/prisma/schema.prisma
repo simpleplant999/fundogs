@@ -203,15 +203,19 @@ model Donation {
   branch                  String                     @default("")
   fundraisingReference    String                     @default("")
   /** Set when paid via Stripe Checkout — used for webhook idempotency */
-  stripeCheckoutSessionId String?                    @unique
+  stripeCheckoutSessionId String?
   /** Set when paid via embedded Payment Element — webhook idempotency */
-  stripePaymentIntentId   String?                    @unique
+  stripePaymentIntentId   String?
   /** PayMongo PaymentIntent id (QR Ph / wallets) — webhook + sync idempotency */
-  paymongoPaymentIntentId String?                    @unique
+  paymongoPaymentIntentId String?
   verificationStatus      DonationVerificationStatus @default(PENDING)
   /** When true, public donor list masks the amount (gift still counts toward raised total). */
   hideAmountPublic        Boolean                    @default(false)
   createdAt               DateTime                   @default(now())
+
+  @@index([paymongoPaymentIntentId])
+  @@index([stripeCheckoutSessionId])
+  @@index([stripePaymentIntentId])
 }
 
 /** Image bytes for Vercel (no writable `public/uploads`). Served at GET /api/media/:id */

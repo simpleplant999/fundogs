@@ -20,6 +20,7 @@ export async function POST(request: Request, context: Ctx) {
       return jsonError(e.message, e.status);
     }
     console.error(e);
-    return jsonError("Failed to sync PayMongo donation", 500);
+    const message = e instanceof Error ? e.message : "Failed to sync PayMongo donation";
+    return jsonError(message, 500);
   }
 }
