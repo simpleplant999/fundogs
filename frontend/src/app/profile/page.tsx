@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ImageLightbox, useImageLightbox } from '@/components/image-lightbox';
+import { ImageDropZone } from '@/components/image-drop-zone';
 import { useAuth } from '@/providers/auth-provider';
 
 const inputClass =
@@ -10,7 +11,6 @@ const inputClass =
 
 export default function ProfilePage() {
   const { user, loading, updateMe, uploadProfilePhoto } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingRemovePhoto, setPendingRemovePhoto] = useState(false);
@@ -100,11 +100,9 @@ export default function ProfilePage() {
         await uploadProfilePhoto(photoFile!);
         setPhotoFile(null);
         setPendingRemovePhoto(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
       } else if (willRemovePhoto) {
         await updateMe({ profilePhotoUrl: '' });
         setPendingRemovePhoto(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
       }
       if (nameChanged) {
         await updateMe({ fullName: trimmed });
@@ -160,112 +158,88 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold text-amber-950">Your profile</h1>
       <div className="mt-8 space-y-8 rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm">
-        <form id="profile-settings-form" onSubmit={(e) => void onSaveProfile(e)} className="space-y-8">
-          <div>
-            <h2 className="text-sm font-semibold text-amber-950">Profile photo</h2>
-            <p className="mt-1 text-xs text-amber-950/65">
-              Upload a picture from your device (JPEG, PNG, WebP, etc., up to 5 MB). Changes apply when you save
-              below.
-            </p>
-            {pendingRemovePhoto && !photoFile ? (
-              <p className="mt-2 text-xs font-medium text-amber-900/70">
-                Photo will be removed when you save.
-              </p>
-            ) : null}
-            <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-2 border-amber-900/15 bg-amber-50">
-                {displayAvatarSrc ? (
-                  <button
-                    type="button"
-                    title="View profile photo larger"
-                    className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
-                    onClick={() => openAt([displayAvatarSrc], 0)}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={displayAvatarSrc}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-amber-950/30">
-                    {(user.fullName?.trim().charAt(0) || '?').toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  aria-label="Choose profile photo"
-                  onChange={(e) => {
+        <div>
+          {pendingRemovePhoto && !photoFile ? (
+            <p className="mb-3 text-xs font-medium text-amber-900/70">Photo will be removed when you save.</p>
+          ) : null}
+          <div className="mb-4 flex items-center gap-4">
+            <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-2 border-amber-900/15 bg-amber-50">
+              {displayAvatarSrc ? (
+                <button
+                  type="button"
+                  title="View profile photo larger"
+                  className="h-full w-full cursor-zoom-in border-0 bg-transparent p-0"
+                  onClick={() => openAt([displayAvatarSrc], 0)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={displayAvatarSrc} alt="" className="h-full w-full object-cover" />
+                </button>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-amber-950/30">
+                  {(user.fullName?.trim().charAt(0) || '?').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {photoFile ? (
+                <button
+                  type="button"
+                  disabled={savingProfile}
+                  onClick={() => {
+                    setPhotoFile(null);
+                    setProfileErr(null);
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-amber-950/80 ring-1 ring-amber-900/15 hover:bg-amber-50 disabled:opacity-40"
+                >
+                  Clear selection
+                </button>
+              ) : null}
+              {user.profilePhotoUrl && !pendingRemovePhoto ? (
+                <button
+                  type="button"
+                  disabled={savingProfile}
+                  onClick={() => {
+                    setPendingRemovePhoto(true);
+                    setPhotoFile(null);
                     setProfileErr(null);
                     setProfileOk(null);
-                    const f = e.target.files?.[0];
-                    setPhotoFile(f ?? null);
-                    if (f) setPendingRemovePhoto(false);
                   }}
-                />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={savingProfile}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
-                  >
-                    Choose photo
-                  </button>
-                  {photoFile ? (
-                    <button
-                      type="button"
-                      disabled={savingProfile}
-                      onClick={() => {
-                        setPhotoFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                        setProfileErr(null);
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-medium text-amber-950/80 ring-1 ring-amber-900/15 hover:bg-amber-50 disabled:opacity-40"
-                    >
-                      Clear selection
-                    </button>
-                  ) : null}
-                  {user.profilePhotoUrl && !pendingRemovePhoto ? (
-                    <button
-                      type="button"
-                      disabled={savingProfile}
-                      onClick={() => {
-                        setPendingRemovePhoto(true);
-                        setPhotoFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                        setProfileErr(null);
-                        setProfileOk(null);
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-semibold text-rose-800 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40"
-                    >
-                      Remove photo
-                    </button>
-                  ) : pendingRemovePhoto && !photoFile ? (
-                    <button
-                      type="button"
-                      disabled={savingProfile}
-                      onClick={() => {
-                        setPendingRemovePhoto(false);
-                        setProfileErr(null);
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-medium text-amber-950/80 ring-1 ring-amber-900/15 hover:bg-amber-50 disabled:opacity-40"
-                    >
-                      Undo remove
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-rose-800 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-40"
+                >
+                  Remove photo
+                </button>
+              ) : pendingRemovePhoto && !photoFile ? (
+                <button
+                  type="button"
+                  disabled={savingProfile}
+                  onClick={() => {
+                    setPendingRemovePhoto(false);
+                    setProfileErr(null);
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-amber-950/80 ring-1 ring-amber-900/15 hover:bg-amber-50 disabled:opacity-40"
+                >
+                  Undo remove
+                </button>
+              ) : null}
             </div>
           </div>
+          <ImageDropZone
+            label="Profile photo"
+            description="Drop a picture here (JPEG, PNG, WebP, etc., up to 4MB). Changes apply when you save below."
+            acceptMultiple={false}
+            disabled={savingProfile}
+            onChooseFiles={(files) => {
+              const f = files[0];
+              if (!f) return;
+              setProfileErr(null);
+              setProfileOk(null);
+              setPhotoFile(f);
+              setPendingRemovePhoto(false);
+            }}
+          />
+        </div>
 
-          <div className="space-y-2 border-t border-amber-900/10 pt-8">
+        <form id="profile-settings-form" onSubmit={(e) => void onSaveProfile(e)} className="space-y-2 border-t border-amber-900/10 pt-8">
             <label className="block text-sm font-medium text-amber-950" htmlFor="profile-full-name">
               Name
             </label>
@@ -283,8 +257,6 @@ export default function ProfilePage() {
               autoComplete="name"
               className={inputClass}
             />
-          </div>
-
         </form>
 
         <p>

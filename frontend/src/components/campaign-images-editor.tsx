@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { CampaignImageCarousel } from '@/components/campaign-image-carousel';
+import { ImageDropZone } from '@/components/image-drop-zone';
 import { ImageLightbox, useImageLightbox } from '@/components/image-lightbox';
 import { uploadCampaignImages } from '@/lib/campaign-images';
 
@@ -16,25 +17,22 @@ type Props = {
 };
 
 export function CampaignImagesEditor({ images, onChange, token, api, disabled }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [urlDraft, setUrlDraft] = useState('');
   const [upErr, setUpErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const { state: stripLightbox, openAt, close, prev, next } = useImageLightbox();
 
-  async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const input = e.target;
-    const list = input.files;
-    if (!list?.length) return;
+  async function uploadFiles(picked: File[]) {
     const room = MAX - images.length;
-    if (room <= 0) return;
-    const picked = Array.from(list).slice(0, room);
-    // Clear after copying: resetting `value` empties `files` in most browsers.
-    input.value = '';
+    if (room <= 0) {
+      setUpErr(`You can attach at most ${MAX} photos.`);
+      return;
+    }
+    const batch = picked.slice(0, room);
+    if (!batch.length) return;
     setUpErr(null);
     setUploading(true);
     try {
-      const urls = await uploadCampaignImages(api, token, picked);
+      const urls = await uploadCampaignImages(api, token, batch);
       onChange([...images, ...urls].slice(0, MAX));
     } catch (err) {
       setUpErr(err instanceof Error ? err.message : 'Upload failed');
@@ -43,19 +41,12 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
     }
   }
 
-  function addUrl() {
-    const u = urlDraft.trim();
-    if (!u || images.length >= MAX) return;
-    onChange([...images, u]);
-    setUrlDraft('');
-  }
-
   function removeAt(i: number) {
     if (images.length <= 1) return;
     onChange(images.filter((_, j) => j !== i));
   }
 
-  const busy = disabled || uploading;
+  const busy = Boolean(disabled || uploading);
 
   return (
     <div className="space-y-3">
@@ -64,46 +55,18 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
         images={images}
         alt="Campaign preview"
         aspectClass="aspect-[16/10]"
-        emptyHint="Add photos or URLs below. If you leave this empty, a default cover image is used when you create the campaign."
+        emptyHint="Drop photos below. If you leave this empty, a default cover image is used when you create the campaign."
       />
       {upErr ? <p className="text-sm text-red-700">{upErr}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          tabIndex={-1}
-          className="sr-only"
-          disabled={busy || images.length >= MAX}
-          onChange={(e) => void onPickFiles(e)}
-        />
-        <button
-          type="button"
-          disabled={busy || images.length >= MAX}
-          onClick={() => inputRef.current?.click()}
-          className="rounded-full bg-amber-950/10 px-3 py-1.5 text-xs font-medium text-amber-950 hover:bg-amber-950/15 disabled:opacity-50"
-        >
-          {uploading ? 'Uploading…' : 'Upload images'}
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={urlDraft}
-          onChange={(e) => setUrlDraft(e.target.value)}
-          placeholder="https://… image URL"
-          disabled={busy || images.length >= MAX}
-          className="min-w-[180px] flex-1 rounded-lg border border-amber-900/15 px-3 py-2 text-sm outline-none ring-teal-600/30 focus:ring-2"
-        />
-        <button
-          type="button"
-          disabled={busy || !urlDraft.trim() || images.length >= MAX}
-          onClick={addUrl}
-          className="rounded-full bg-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-zinc-300 disabled:opacity-50"
-        >
-          Add URL
-        </button>
-      </div>
+      <ImageDropZone
+        label="Photos"
+        description={`Up to ${MAX} images, 4MB each. First image is the main thumbnail.`}
+        acceptMultiple
+        disabled={busy || images.length >= MAX}
+        uploading={uploading}
+        browseHint={`or click this area to browse — JPEG, PNG, WebP, GIF, HEIC (max ${MAX})`}
+        onChooseFiles={(files) => void uploadFiles(files)}
+      />
       {images.length ? (
         <ul className="flex flex-wrap gap-2">
           {images.map((src, i) => (
@@ -130,7 +93,6 @@ export function CampaignImagesEditor({ images, onChange, token, api, disabled }:
           ))}
         </ul>
       ) : null}
-      <p className="text-xs text-amber-950/55">Up to {MAX} images, 4MB each. First image is the main thumbnail.</p>
       <ImageLightbox
         state={stripLightbox}
         onClose={close}

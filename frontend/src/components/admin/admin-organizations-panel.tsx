@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { ImageDropZone } from '@/components/image-drop-zone';
+import { uploadCampaignImages } from '@/lib/campaign-images';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
 type OrgListRow = {
@@ -37,6 +39,13 @@ function parseApiError(data: unknown): string {
   return 'Request failed';
 }
 
+function parsePhotoLines(text: string): string[] {
+  return text
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function AdminOrganizationsPanel() {
   const headingId = useId();
   const { token } = useAuth();
@@ -54,6 +63,9 @@ export function AdminOrganizationsPanel() {
   const [cCover, setCCover] = useState('');
   const [cPhotos, setCPhotos] = useState('');
   const [cErr, setCErr] = useState<string | null>(null);
+  const [cUpProfile, setCUpProfile] = useState(false);
+  const [cUpCover, setCUpCover] = useState(false);
+  const [cUpGallery, setCUpGallery] = useState(false);
 
   const [eName, setEName] = useState('');
   const [eSlug, setESlug] = useState('');
@@ -62,6 +74,9 @@ export function AdminOrganizationsPanel() {
   const [eCover, setECover] = useState('');
   const [ePhotos, setEPhotos] = useState('');
   const [eErr, setEErr] = useState<string | null>(null);
+  const [eUpProfile, setEUpProfile] = useState(false);
+  const [eUpCover, setEUpCover] = useState(false);
+  const [eUpGallery, setEUpGallery] = useState(false);
 
   const load = useCallback(async () => {
     if (!api || !token) return;
@@ -98,10 +113,7 @@ export function AdminOrganizationsPanel() {
     setCErr(null);
     setBusy(true);
     try {
-      const photoUrls = cPhotos
-        .split(/[\n,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const photoUrls = parsePhotoLines(cPhotos);
       const res = await fetch(`${api}/admin/organizations`, {
         method: 'POST',
         headers: {
@@ -142,10 +154,7 @@ export function AdminOrganizationsPanel() {
     setEErr(null);
     setBusy(true);
     try {
-      const photoUrls = ePhotos
-        .split(/[\n,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const photoUrls = parsePhotoLines(ePhotos);
       const res = await fetch(`${api}/admin/organizations/${detail.id}`, {
         method: 'PATCH',
         headers: {
@@ -233,6 +242,101 @@ export function AdminOrganizationsPanel() {
     setMsg('Invite code copied.');
   }
 
+  async function uploadOrgImages(files: File[]): Promise<string[]> {
+    if (!api || !token) throw new Error('Not signed in');
+    return uploadCampaignImages(api, token, files);
+  }
+
+  async function onCreateProfileFiles(files: File[]) {
+    const f = files[0];
+    if (!f) return;
+    setCErr(null);
+    setCUpProfile(true);
+    try {
+      const urls = await uploadOrgImages([f]);
+      if (urls[0]) setCProfile(urls[0]);
+    } catch (err) {
+      setCErr(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setCUpProfile(false);
+    }
+  }
+
+  async function onCreateCoverFiles(files: File[]) {
+    const f = files[0];
+    if (!f) return;
+    setCErr(null);
+    setCUpCover(true);
+    try {
+      const urls = await uploadOrgImages([f]);
+      if (urls[0]) setCCover(urls[0]);
+    } catch (err) {
+      setCErr(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setCUpCover(false);
+    }
+  }
+
+  async function onCreateGalleryFiles(files: File[]) {
+    if (!files.length) return;
+    setCErr(null);
+    setCUpGallery(true);
+    try {
+      const urls = await uploadOrgImages(files);
+      const merged = [...parsePhotoLines(cPhotos), ...urls];
+      setCPhotos(merged.join('\n'));
+    } catch (err) {
+      setCErr(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setCUpGallery(false);
+    }
+  }
+
+  async function onEditProfileFiles(files: File[]) {
+    const f = files[0];
+    if (!f) return;
+    setEErr(null);
+    setEUpProfile(true);
+    try {
+      const urls = await uploadOrgImages([f]);
+      if (urls[0]) setEProfile(urls[0]);
+    } catch (err) {
+      setEErr(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setEUpProfile(false);
+    }
+  }
+
+  async function onEditCoverFiles(files: File[]) {
+    const f = files[0];
+    if (!f) return;
+    setEErr(null);
+    setEUpCover(true);
+    try {
+      const urls = await uploadOrgImages([f]);
+      if (urls[0]) setECover(urls[0]);
+    } catch (err) {
+      setEErr(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setEUpCover(false);
+    }
+  }
+
+  async function onEditGalleryFiles(files: File[]) {
+    if (!files.length) return;
+    setEErr(null);
+    setEUpGallery(true);
+    try {
+      const urls = await uploadOrgImages(files);
+      const merged = [...parsePhotoLines(ePhotos), ...urls];
+      setEPhotos(merged.join('\n'));
+    } catch (err) {
+      setEErr(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setEUpGallery(false);
+    }
+  }
+
   return (
     <>
       <section className="rounded-2xl border border-amber-900/10 bg-white p-5 shadow-sm sm:p-6">
@@ -310,18 +414,17 @@ export function AdminOrganizationsPanel() {
           role="presentation"
           onClick={() => !busy && setCreateOpen(false)}
         >
-          <form
+          <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${headingId}-create`}
             className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-amber-900/15 bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
-            onSubmit={(e) => void createOrg(e)}
           >
             <h3 id={`${headingId}-create`} className="text-lg font-bold text-amber-950">
               New organization
             </h3>
-            <div className="mt-4 space-y-3">
+            <form id="admin-new-org" className="mt-4 space-y-3" onSubmit={(e) => void createOrg(e)}>
               <label className="block text-sm font-medium text-amber-950">
                 Organization name *
                 <input
@@ -350,36 +453,68 @@ export function AdminOrganizationsPanel() {
                   className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
                 />
               </label>
-              <label className="block text-sm font-medium text-amber-950">
-                Profile photo URL
-                <input
-                  value={cProfile}
-                  onChange={(e) => setCProfile(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
-                />
-              </label>
-              <label className="block text-sm font-medium text-amber-950">
-                Cover photo URL
-                <input
-                  value={cCover}
-                  onChange={(e) => setCCover(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
-                />
-              </label>
-              <label className="block text-sm font-medium text-amber-950">
-                Gallery image URLs (one per line)
-                <textarea
-                  rows={3}
-                  value={cPhotos}
-                  onChange={(e) => setCPhotos(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 font-mono text-xs outline-none ring-teal-600/30 focus:ring-2"
-                />
-              </label>
+            </form>
+            <div className="mt-4 space-y-4">
+              <ImageDropZone
+                label="Profile photo"
+                description="Optional."
+                disabled={busy}
+                uploading={cUpProfile}
+                onChooseFiles={(files) => void onCreateProfileFiles(files)}
+              />
+              {cProfile ? (
+                <div className="h-16 w-16 overflow-hidden rounded-full border border-amber-900/15 bg-amber-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cProfile} alt="" className="h-full w-full object-cover" />
+                </div>
+              ) : null}
+              <ImageDropZone
+                label="Cover photo"
+                description="Optional."
+                disabled={busy}
+                uploading={cUpCover}
+                variant="cover"
+                onChooseFiles={(files) => void onCreateCoverFiles(files)}
+              />
+              {cCover ? (
+                <div className="aspect-[16/6] max-h-24 overflow-hidden rounded-xl border border-amber-900/15 bg-amber-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cCover} alt="" className="h-full w-full object-cover" />
+                </div>
+              ) : null}
+              <ImageDropZone
+                label="Gallery images"
+                acceptMultiple
+                disabled={busy}
+                uploading={cUpGallery}
+                variant="cover"
+                onChooseFiles={(files) => void onCreateGalleryFiles(files)}
+              />
+              {parsePhotoLines(cPhotos).length ? (
+                <ul className="flex flex-wrap gap-2">
+                  {parsePhotoLines(cPhotos).map((src, i) => (
+                    <li key={`${i}-${src.slice(0, 32)}`} className="relative h-14 w-14 overflow-hidden rounded-lg border border-amber-900/15 bg-amber-50">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCPhotos(parsePhotoLines(cPhotos).filter((_, j) => j !== i).join('\n'))
+                        }
+                        className="absolute right-0 top-0 rounded-bl bg-amber-950/80 px-1 text-[10px] font-bold text-white hover:bg-amber-950"
+                        aria-label="Remove image"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {cErr ? <p className="text-sm text-red-700">{cErr}</p> : null}
               <div className="flex flex-wrap justify-end gap-2 border-t border-amber-900/10 pt-4">
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || cUpProfile || cUpCover || cUpGallery}
                   onClick={() => setCreateOpen(false)}
                   className="rounded-full px-4 py-2 text-sm font-medium text-amber-950 ring-1 ring-amber-900/20 hover:bg-amber-50 disabled:opacity-50"
                 >
@@ -387,14 +522,15 @@ export function AdminOrganizationsPanel() {
                 </button>
                 <button
                   type="submit"
-                  disabled={busy}
+                  form="admin-new-org"
+                  disabled={busy || cUpProfile || cUpCover || cUpGallery}
                   className="rounded-full bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
                 >
                   {busy ? 'Creating…' : 'Create'}
                 </button>
               </div>
             </div>
-          </form>
+          </div>
         </div>
       ) : null}
 
@@ -479,31 +615,59 @@ export function AdminOrganizationsPanel() {
                     className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
                   />
                 </label>
-                <label className="block text-sm font-medium text-amber-950">
-                  Profile photo URL
-                  <input
-                    value={eProfile}
-                    onChange={(e) => setEProfile(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-amber-950">
-                  Cover photo URL
-                  <input
-                    value={eCover}
-                    onChange={(e) => setECover(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
-                  />
-                </label>
-                <label className="block text-sm font-medium text-amber-950">
-                  Gallery URLs (one per line)
-                  <textarea
-                    rows={3}
-                    value={ePhotos}
-                    onChange={(e) => setEPhotos(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 font-mono text-xs outline-none ring-teal-600/30 focus:ring-2"
-                  />
-                </label>
+                <ImageDropZone
+                  label="Profile photo"
+                  disabled={busy}
+                  uploading={eUpProfile}
+                  onChooseFiles={(files) => void onEditProfileFiles(files)}
+                />
+                {eProfile ? (
+                  <div className="h-16 w-16 overflow-hidden rounded-full border border-amber-900/15 bg-amber-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={eProfile} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ) : null}
+                <ImageDropZone
+                  label="Cover photo"
+                  disabled={busy}
+                  uploading={eUpCover}
+                  variant="cover"
+                  onChooseFiles={(files) => void onEditCoverFiles(files)}
+                />
+                {eCover ? (
+                  <div className="aspect-[16/6] max-h-24 overflow-hidden rounded-xl border border-amber-900/15 bg-amber-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={eCover} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ) : null}
+                <ImageDropZone
+                  label="Gallery images"
+                  acceptMultiple
+                  disabled={busy}
+                  uploading={eUpGallery}
+                  variant="cover"
+                  onChooseFiles={(files) => void onEditGalleryFiles(files)}
+                />
+                {parsePhotoLines(ePhotos).length ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {parsePhotoLines(ePhotos).map((src, i) => (
+                      <li key={`${i}-${src.slice(0, 32)}`} className="relative h-14 w-14 overflow-hidden rounded-lg border border-amber-900/15 bg-amber-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEPhotos(parsePhotoLines(ePhotos).filter((_, j) => j !== i).join('\n'))
+                          }
+                          className="absolute right-0 top-0 rounded-bl bg-amber-950/80 px-1 text-[10px] font-bold text-white hover:bg-amber-950"
+                          aria-label="Remove image"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
                 {eErr ? <p className="text-sm text-red-700">{eErr}</p> : null}
                 <div className="flex flex-wrap gap-2">
                   <button

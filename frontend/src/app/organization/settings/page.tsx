@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { OrganizationAdminSubnav } from '@/components/organization-admin-subnav';
-import { OrganizationImageDropZone } from '@/components/organization-image-drop-zone';
+import { ImageDropZone } from '@/components/image-drop-zone';
 import { OrganizationPublicPreview } from '@/components/organization-public-preview';
 import { getClientApiBase, useAuth } from '@/providers/auth-provider';
 
@@ -368,6 +368,73 @@ export default function OrganizationSettingsPage() {
                   Close editor
                 </button>
               </div>
+              <div className="space-y-4 rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm">
+                <ImageDropZone
+                  label="Profile photo"
+                  description="Saved immediately when you drop or choose a file."
+                  acceptMultiple={false}
+                  disabled={saving}
+                  uploading={uploadingProfile}
+                  onChooseFiles={(files) => {
+                    const f = files[0];
+                    if (f) void uploadOrgProfilePhoto(f);
+                  }}
+                />
+                {profilePhotoUrl ? (
+                  <div className="h-20 w-20 overflow-hidden rounded-full border border-amber-900/15 bg-amber-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={profilePhotoUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ) : null}
+                <ImageDropZone
+                  label="Cover photo"
+                  description="Saved immediately when you drop or choose a file."
+                  acceptMultiple={false}
+                  disabled={saving}
+                  uploading={uploadingCover}
+                  variant="cover"
+                  onChooseFiles={(files) => {
+                    const f = files[0];
+                    if (f) void uploadOrgCoverPhoto(f);
+                  }}
+                />
+                {coverPhotoUrl ? (
+                  <div className="aspect-[16/6] max-h-28 overflow-hidden rounded-xl border border-amber-900/15 bg-amber-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={coverPhotoUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ) : null}
+                <ImageDropZone
+                  label="Gallery images"
+                  description={`Drop files here (max ${ORG_GALLERY_MAX} total). Then Save changes below to publish.`}
+                  acceptMultiple
+                  disabled={saving}
+                  uploading={uploadingGallery}
+                  variant="cover"
+                  onChooseFiles={(files) => void uploadOrgGalleryFiles(files)}
+                />
+                {previewPhotos.length ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {previewPhotos.map((src, i) => (
+                      <li key={`${i}-${src.slice(0, 32)}`} className="relative h-14 w-14 overflow-hidden rounded-lg border border-amber-900/15 bg-amber-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPhotoUrlsText(previewPhotos.filter((_, j) => j !== i).join('\n'))
+                          }
+                          className="absolute right-0 top-0 rounded-bl bg-amber-950/80 px-1 text-[10px] font-bold text-white hover:bg-amber-950"
+                          aria-label="Remove image"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {uploadErr ? <p className="text-sm text-red-700">{uploadErr}</p> : null}
+              </div>
               <form
                 onSubmit={(e) => void onSave(e)}
                 className="space-y-4 rounded-2xl border border-amber-900/10 bg-white p-6 shadow-sm"
@@ -391,9 +458,6 @@ export default function OrganizationSettingsPage() {
                     onChange={(e) => setSlug(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 font-mono text-sm outline-none ring-teal-600/30 focus:ring-2"
                   />
-                  {/* <span className="mt-1 block text-xs text-amber-950/55">
-                    Public URL: /organizations/{slug || '…'}
-                  </span> */}
                 </label>
                 <label className="block text-sm font-medium text-amber-950">
                   Bio
@@ -404,70 +468,8 @@ export default function OrganizationSettingsPage() {
                     className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
                   />
                 </label>
-                <div className="space-y-2">
-                  <OrganizationImageDropZone
-                    label="Profile photo"
-                    description="Saved immediately when you upload. You can still paste a URL below."
-                    acceptMultiple={false}
-                    disabled={saving}
-                    uploading={uploadingProfile}
-                    onChooseFiles={(files) => {
-                      const f = files[0];
-                      if (f) void uploadOrgProfilePhoto(f);
-                    }}
-                  />
-                  <label className="block text-sm font-medium text-amber-950">
-                    Profile photo URL
-                    <input
-                      value={profilePhotoUrl}
-                      onChange={(e) => setProfilePhotoUrl(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
-                    />
-                  </label>
-                </div>
-                <div className="space-y-2">
-                  <OrganizationImageDropZone
-                    label="Cover photo"
-                    description="Saved immediately when you upload. You can still paste a URL below."
-                    acceptMultiple={false}
-                    disabled={saving}
-                    uploading={uploadingCover}
-                    variant="cover"
-                    onChooseFiles={(files) => {
-                      const f = files[0];
-                      if (f) void uploadOrgCoverPhoto(f);
-                    }}
-                  />
-                  <label className="block text-sm font-medium text-amber-950">
-                    Cover photo URL
-                    <input
-                      value={coverPhotoUrl}
-                      onChange={(e) => setCoverPhotoUrl(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 outline-none ring-teal-600/30 focus:ring-2"
-                    />
-                  </label>
-                </div>
-                <div className="space-y-2">
-                  <OrganizationImageDropZone
-                    label="Gallery images"
-                    description={`Drop up to 12 files at once. URLs are added to the list below (max ${ORG_GALLERY_MAX}); use Save changes to publish.`}
-                    acceptMultiple
-                    disabled={saving}
-                    uploading={uploadingGallery}
-                    variant="cover"
-                    onChooseFiles={(files) => void uploadOrgGalleryFiles(files)}
-                  />
-                  <label className="block text-sm font-medium text-amber-950">
-                    Gallery image URLs (one per line)
-                    <textarea
-                      rows={4}
-                      value={photoUrlsText}
-                      onChange={(e) => setPhotoUrlsText(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-amber-900/15 px-3 py-2 font-mono text-xs outline-none ring-teal-600/30 focus:ring-2"
-                    />
-                  </label>
-                </div>
-                {uploadErr ? <p className="text-sm text-red-700">{uploadErr}</p> : null}
+                {formErr ? <p className="text-sm text-red-700">{formErr}</p> : null}
+                {msg ? <p className="text-sm text-teal-800">{msg}</p> : null}
                 <button
                   type="submit"
                   disabled={saving}
@@ -476,8 +478,6 @@ export default function OrganizationSettingsPage() {
                   {saving ? 'Saving…' : 'Save changes'}
                 </button>
               </form>
-              {formErr ? <p className="text-sm text-red-700">{formErr}</p> : null}
-              {msg ? <p className="text-sm text-teal-800">{msg}</p> : null}
             </>
           )}
         </div>
