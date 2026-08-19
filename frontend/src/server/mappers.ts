@@ -67,9 +67,22 @@ function lifecycleToStatus(s: CampaignLifecycleStatus): ApiCampaign["status"] {
   return m[s];
 }
 
+function toPublicMediaUrl(url: string): string {
+  const raw = url.trim();
+  if (!raw) return raw;
+  if (raw.startsWith("/")) return raw;
+  try {
+    const u = new URL(raw);
+    if (u.pathname.startsWith("/uploads/")) return `${u.pathname}${u.search}`;
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
 function galleryUrls(c: Campaign): string[] {
-  if (c.imageUrls?.length) return [...c.imageUrls];
-  return [c.imageUrl];
+  const raw = c.imageUrls?.length ? [...c.imageUrls] : [c.imageUrl];
+  return raw.map(toPublicMediaUrl).filter(Boolean);
 }
 
 type CampaignWithAuthorOpt = Campaign & {
@@ -97,7 +110,7 @@ export function mapCampaign(c: CampaignWithAuthorOpt): ApiCampaign {
     slug: c.slug,
     title: c.title,
     description: c.description,
-    imageUrl: images[0] ?? c.imageUrl,
+    imageUrl: toPublicMediaUrl(images[0] ?? c.imageUrl),
     images,
     goalAmount: c.goalAmount,
     raisedAmount: c.raisedAmount,
@@ -126,7 +139,7 @@ export function mapComment(c: Comment & { author?: User | null }): ApiComment {
 
 export function mapCampaignUpdate(row: CampaignUpdate): ApiCampaignUpdate {
   const imgs = row.imageUrls;
-  const images = imgs?.length ? [...imgs] : [];
+  const images = imgs?.length ? imgs.map(toPublicMediaUrl) : [];
   return {
     id: row.id,
     title: row.title.trim(),

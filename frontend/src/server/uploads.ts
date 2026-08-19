@@ -17,16 +17,8 @@ export function isAllowedImageFile(file: File): boolean {
 
 export type UploadSubdir = "campaigns" | "users" | "organizations";
 
-export function publicUploadUrl(request: Request, subdir: UploadSubdir, filename: string) {
-  const host =
-    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
-    request.headers.get("host") ||
-    "localhost:3000";
-  const proto =
-    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
-    (host.includes("localhost") ? "http" : "https");
-  const safeProto = proto === "https" ? "https" : "http";
-  return `${safeProto}://${host}/uploads/${subdir}/${filename}`;
+export function publicUploadUrl(_request: Request, subdir: UploadSubdir, filename: string) {
+  return `/uploads/${subdir}/${filename}`;
 }
 
 /** Save under `public/uploads/<subdir>` so Next can serve at `/uploads/...`. */

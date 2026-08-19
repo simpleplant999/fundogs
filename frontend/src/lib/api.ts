@@ -12,6 +12,20 @@ function hasDatabase(): boolean {
   return Boolean(process.env.DATABASE_URL?.trim());
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * Base URL including `/api`.
  * Defaults to same-origin `/api` (App Router). On the server, relative `/api`
@@ -117,7 +131,7 @@ export async function fetchPublishedCampaigns(
   if (typeof window === "undefined" && hasDatabase()) {
     try {
       const { listPublic } = await import("@/server/campaigns/service");
-      return (await listPublic(campaignType)) as Campaign[];
+      return (await withTimeout(listPublic(campaignType), 8000)) as Campaign[];
     } catch (e) {
       console.error("fetchPublishedCampaigns direct failed", e);
       return null;
