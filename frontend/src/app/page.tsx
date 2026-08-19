@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { CampaignCard } from "@/components/campaign-card";
 import { PawBackdrop } from "@/components/paw-backdrop";
 import { loadPublishedCampaigns } from "@/lib/api";
@@ -23,10 +24,7 @@ const trustPillars = [
   },
 ] as const;
 
-export default async function HomePage() {
-  const published = await loadPublishedCampaigns();
-  const featured = published.slice(0, 6);
-
+export default function HomePage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-amber-900/10 bg-gradient-to-b from-amber-50 to-[#fffaf3]">
@@ -139,35 +137,26 @@ export default async function HomePage() {
               Browse all campaigns →
             </Link>
           </div>
-          {featured.length === 0 ? (
-            <div className="mt-10 rounded-2xl border border-dashed border-amber-900/20 bg-amber-50/50 px-6 py-14 text-center">
-              <p className="text-lg font-semibold text-amber-950">No published campaigns yet</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-amber-950/75">
-                When approved campaigns go live, they will appear here. Check back soon—or learn how
-                verification works before the first campaigns launch.
-              </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Link
-                  href="/validation"
-                  className="inline-flex rounded-full bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800"
-                >
-                  How verification works
-                </Link>
-                <Link
-                  href="/donate"
-                  className="inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-amber-950 ring-1 ring-amber-900/15 hover:bg-amber-50"
-                >
-                  Visit the donate hub
-                </Link>
+          <Suspense
+            fallback={
+              <div
+                className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                role="status"
+                aria-busy="true"
+              >
+                <span className="sr-only">Loading campaigns…</span>
+                {Array.from({ length: 3 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="h-80 animate-pulse rounded-2xl bg-amber-950/[0.09]"
+                    aria-hidden
+                  />
+                ))}
               </div>
-            </div>
-          ) : (
-            <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {featured.map((c) => (
-                <CampaignCard key={c.id} campaign={c} />
-              ))}
-            </div>
-          )}
+            }
+          >
+            <FeaturedCampaigns />
+          </Suspense>
         </div>
       </section>
 
@@ -211,6 +200,44 @@ export default async function HomePage() {
           <p className="mt-6 text-xl font-semibold">🐾 FunDogs: Rescue. Rehome. Rebuild.</p>
         </div>
       </section>
+    </div>
+  );
+}
+
+async function FeaturedCampaigns() {
+  const featured = (await loadPublishedCampaigns()).slice(0, 6);
+
+  if (featured.length === 0) {
+    return (
+      <div className="mt-10 rounded-2xl border border-dashed border-amber-900/20 bg-amber-50/50 px-6 py-14 text-center">
+        <p className="text-lg font-semibold text-amber-950">No published campaigns yet</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-amber-950/75">
+          When approved campaigns go live, they will appear here. Check back soon—or learn how
+          verification works before the first campaigns launch.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/validation"
+            className="inline-flex rounded-full bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800"
+          >
+            How verification works
+          </Link>
+          <Link
+            href="/donate"
+            className="inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-amber-950 ring-1 ring-amber-900/15 hover:bg-amber-50"
+          >
+            Visit the donate hub
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      {featured.map((c) => (
+        <CampaignCard key={c.id} campaign={c} />
+      ))}
     </div>
   );
 }

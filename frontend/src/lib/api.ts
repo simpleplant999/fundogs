@@ -8,9 +8,62 @@ import {
   getPublishedAndDoneCampaigns,
 } from "./data";
 
-/** Base URL including `/api`, e.g. `http://localhost:4000/api` */
+function hasDatabase(): boolean {
+  return Boolean(process.env.DATABASE_URL?.trim());
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
+ * Base URL including `/api`.
+ * Defaults to same-origin `/api` (App Router). On the server, relative `/api`
+ * is expanded using the incoming request host (so port 3002 works, not hardcoded 3000).
+ */
 export function getApiBase(): string {
-  return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? "");
+  const normalized = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? "/api");
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (typeof window !== "undefined") return normalized;
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  const fromVercel = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, "")}`
+    : "";
+  const origin = fromEnv || fromVercel || "http://localhost:3000";
+  return `${origin}${normalized.startsWith("/") ? normalized : `/${normalized}`}`;
+}
+
+/** Async base URL that reads the current request Host (fixes wrong-port SSR fetches). */
+export async function resolveApiBase(): Promise<string> {
+  const normalized = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? "/api");
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (typeof window !== "undefined") return normalized;
+
+  try {
+    const { headers } = await import("next/headers");
+    const h = await headers();
+    const host = h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host");
+    if (host) {
+      const proto =
+        h.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+        (host.includes("localhost") || host.startsWith("127.") ? "http" : "https");
+      return `${proto}://${host}${normalized.startsWith("/") ? normalized : `/${normalized}`}`;
+    }
+  } catch {
+    /* outside a request (e.g. build) */
+  }
+
+  return getApiBase();
 }
 
 export type PublicOrganizationListItem = {
@@ -23,7 +76,15 @@ export type PublicOrganizationListItem = {
 };
 
 export async function fetchOrganizations(): Promise<PublicOrganizationListItem[] | null> {
-  const base = getApiBase();
+  if (typeof window === "undefined" && hasDatabase()) {
+    try {
+      const { listPublic } = await import("@/server/organizations/service");
+      return await listPublic();
+    } catch (e) {
+      console.error("fetchOrganizations direct failed", e);
+    }
+  }
+  const base = await resolveApiBase();
   if (!base) return null;
   try {
     const res = await fetch(`${base}/organizations`, { cache: "no-store" });
@@ -43,7 +104,15 @@ export type PublicUserProfile = {
 };
 
 export async function fetchPublicUserProfile(userId: string): Promise<PublicUserProfile | null> {
-  const base = getApiBase();
+  if (typeof window === "undefined" && hasDatabase()) {
+    try {
+      const { getPublicProfile } = await import("@/server/users/service");
+      return (await getPublicProfile(userId)) as PublicUserProfile;
+    } catch {
+      return null;
+    }
+  }
+  const base = await resolveApiBase();
   if (!base) return null;
   try {
     const res = await fetch(`${base}/users/${encodeURIComponent(userId)}/profile`, {
@@ -59,14 +128,23 @@ export async function fetchPublicUserProfile(userId: string): Promise<PublicUser
 export async function fetchPublishedCampaigns(
   campaignType?: string,
 ): Promise<Campaign[] | null> {
-  const base = getApiBase();
+  if (typeof window === "undefined" && hasDatabase()) {
+    try {
+      const { listPublic } = await import("@/server/campaigns/service");
+      return (await withTimeout(listPublic(campaignType), 8000)) as Campaign[];
+    } catch (e) {
+      console.error("fetchPublishedCampaigns direct failed", e);
+      return null;
+    }
+  }
+  const base = await resolveApiBase();
   if (!base) return null;
   const q =
     campaignType && isCampaignTypeId(campaignType)
       ? `?type=${encodeURIComponent(campaignType)}`
       : "";
   try {
-    const res = await fetch(`${base}/campaigns${q}`, { cache: 'no-store' });
+    const res = await fetch(`${base}/campaigns${q}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -75,7 +153,18 @@ export async function fetchPublishedCampaigns(
 }
 
 export async function fetchCampaignBySlug(slug: string): Promise<Campaign | null> {
-  const base = getApiBase();
+  if (typeof window === "undefined" && hasDatabase()) {
+    try {
+      const { getBySlug, CampaignHttpError } = await import("@/server/campaigns/service");
+      return (await getBySlug(slug)) as Campaign;
+    } catch (e) {
+      const err = e as { status?: number; name?: string };
+      if (err?.status === 404) return null;
+      console.error("fetchCampaignBySlug direct failed", e);
+      return null;
+    }
+  }
+  const base = await resolveApiBase();
   if (!base) return null;
   try {
     const res = await fetch(`${base}/campaigns/${encodeURIComponent(slug)}`, {
@@ -89,7 +178,15 @@ export async function fetchCampaignBySlug(slug: string): Promise<Campaign | null
 }
 
 export async function fetchDonors(slug: string): Promise<Donor[] | null> {
-  const base = getApiBase();
+  if (typeof window === "undefined" && hasDatabase()) {
+    try {
+      const { getDonors } = await import("@/server/campaigns/service");
+      return (await getDonors(slug)) as Donor[];
+    } catch {
+      return null;
+    }
+  }
+  const base = await resolveApiBase();
   if (!base) return null;
   try {
     const res = await fetch(`${base}/campaigns/${encodeURIComponent(slug)}/donors`, {
@@ -103,7 +200,15 @@ export async function fetchDonors(slug: string): Promise<Donor[] | null> {
 }
 
 export async function fetchComments(slug: string): Promise<Comment[] | null> {
-  const base = getApiBase();
+  if (typeof window === "undefined" && hasDatabase()) {
+    try {
+      const { getComments } = await import("@/server/campaigns/service");
+      return (await getComments(slug)) as Comment[];
+    } catch {
+      return null;
+    }
+  }
+  const base = await resolveApiBase();
   if (!base) return null;
   try {
     const res = await fetch(`${base}/campaigns/${encodeURIComponent(slug)}/comments`, {
@@ -119,11 +224,8 @@ export async function fetchComments(slug: string): Promise<Comment[] | null> {
 export async function loadPublishedCampaigns(campaignType?: string): Promise<Campaign[]> {
   const remote = await fetchPublishedCampaigns(campaignType);
   if (remote && Array.isArray(remote)) return remote;
-  const all = getPublishedAndDoneCampaigns();
-  if (campaignType && isCampaignTypeId(campaignType)) {
-    return all.filter((c) => c.campaignType === campaignType);
-  }
-  return all;
+  // Do not fall back to static mock data when the App Router API / MongoDB is in use.
+  return [];
 }
 
 export async function loadCampaignPageData(slug: string): Promise<{
@@ -131,7 +233,7 @@ export async function loadCampaignPageData(slug: string): Promise<{
   donors: Donor[];
   comments: Comment[];
 } | null> {
-  if (!getApiBase()) {
+  if (!hasDatabase() && !(await resolveApiBase())) {
     const campaign = getCampaignBySlug(slug);
     if (!campaign) return null;
     return {

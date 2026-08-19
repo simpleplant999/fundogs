@@ -7,7 +7,7 @@ FunDogs helps people support animal rescue and rehoming through clear, trustwort
 ## For everyone (no account needed)
 
 - **Home** — Learn what FunDogs is about, see how we verify people and campaigns, and browse featured fundraisers when they are live.
-- **Donate** — Explore open fundraising campaigns and open the ones you care about.
+- **Donate** — Explore open fundraising campaigns, **filter by campaign type**, and open the ones you care about.
 - **Organizations** — Discover rescue groups and partners on the platform and see their public pages and campaigns.
 - **How verification works** — Step-by-step explanation of how posts and campaigns are reviewed before they go public.
 - **Terms & fees** — Plain-language summary of how fees work for campaigns and donations.
@@ -37,6 +37,7 @@ FunDogs helps people support animal rescue and rehoming through clear, trustwort
 ## For people raising funds
 
 - **My campaigns** — See all your fundraisers in one place and start a **new campaign**.
+- **Campaign type** — When you create a campaign, choose what the fundraiser is for (example types: medical, transport, shelter care, spay/neuter, adoption/foster, etc.). This helps supporters browse and understand your goal quickly.
 - **Edit your campaign** — Update the story, photos, and goal; manage payout details and request withdrawals according to the platform rules.
 - **Campaign updates** — Post short updates so donors see how things are going.
 
@@ -58,6 +59,11 @@ If you belong to a group on FunDogs (for example a rescue chapter):
 - We take **reports seriously**—use **Contact us** if something looks wrong.
 
 ---
+
+## For admins (moderators)
+
+- **Campaign moderation** — Review pending campaigns and approve/reject them before they go live.
+- **Filter campaigns by type** — Filter the admin campaign list by campaign type to review similar fundraisers together.
 
 ## Note
 

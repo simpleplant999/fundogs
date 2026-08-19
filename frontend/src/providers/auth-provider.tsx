@@ -56,7 +56,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function getClientApiBase(): string {
-  return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? '');
+  return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL ?? "/api");
 }
 
 function parseApiError(data: unknown): string {

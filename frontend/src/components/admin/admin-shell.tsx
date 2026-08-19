@@ -18,14 +18,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (loading || !user || user.role !== 'ADMIN') {
     return (
-      <div className="flex min-h-0 flex-1 flex-basis-0 items-center justify-center px-4 py-12 text-amber-950/75">
+      <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-12 text-amber-950/75">
         Checking admin access…
       </div>
     );
   }
 
   return (
-    <div className="grid h-full min-h-0 w-full flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-[#fffaf3] lg:grid-cols-[14rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+    <div className="grid h-full min-h-0 w-full grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-[#fffaf3] lg:grid-cols-[14rem_minmax(0,1fr)] lg:grid-rows-1">
       <AdminSidebar />
       <div className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:min-h-0">
         <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-amber-900/10 bg-white/80 px-4 py-3 backdrop-blur lg:hidden">

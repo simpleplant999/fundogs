@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+/** Role within an organization (only when organizationId is set). */
+enum OrganizationMemberRole {
+  MEMBER
+  ADMIN
+}
+
+enum CampaignApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CampaignLifecycleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DONE
+}
+
+enum CampaignType {
+  MEDICAL_EMERGENCY
+  RESCUE_TRANSPORT
+  SHELTER_DAILY_CARE
+  SPAY_NEUTER_TNR
+  ADOPTION_FOSTER
+  BEHAVIOR_TRAINING
+  MEMORIAL_TRIBUTE
+  COMMUNITY_EDUCATION
+  OTHER
+}
+
+enum CommentModerationStatus {
+  PENDING
+  VISIBLE
+  REJECTED
+}
+
+enum DonationVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum WithdrawalRequestStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum ContactMessageCategory {
+  REPORT_PROBLEM
+  GENERAL_QUESTION
+}
+
+model User {
+  id                     String                   @id @default(uuid()) @map("_id")
+  email                  String                   @unique
+  passwordHash           String
+  fullName               String
+  profilePhotoUrl        String                   @default("")
+  role                   UserRole                 @default(USER)
+  organizationId         String?
+  organizationMemberRole OrganizationMemberRole?
+  organization           Organization?            @relation(fields: [organizationId], references: [id])
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  campaigns          Campaign[]
+  comments           Comment[]
+  campaignUpdates    CampaignUpdate[]
+  withdrawalRequests WithdrawalRequest[]
+}
+
+model Organization {
+  id              String   @id @default(uuid()) @map("_id")
+  slug            String   @unique
+  name            String
+  bio             String   @default("")
+  profilePhotoUrl String   @default("")
+  coverPhotoUrl   String   @default("")
+  photoUrls       String[] @default([])
+  inviteCode      String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  members User[]
+}
+
+model Campaign {
+  id              String                  @id @default(uuid()) @map("_id")
+  slug            String                  @unique
+  title           String
+  description     String
+  imageUrl        String
+  imageUrls       String[]                @default([])
+  goalAmount      Float
+  raisedAmount    Float                   @default(0)
+  withdrawnAmount Float                   @default(0)
+  campaignType    CampaignType            @default(OTHER)
+  lifecycleStatus CampaignLifecycleStatus @default(DRAFT)
+  approvalStatus  CampaignApprovalStatus  @default(PENDING)
+  recipientName   String
+  recipientNote   String
+  authorId        String
+  author          User                    @relation(fields: [authorId], references: [id])
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  comments           Comment[]
+  donations          Donation[]
+  updates            CampaignUpdate[]
+  bankAccount        CampaignBankAccount?
+  withdrawalRequests WithdrawalRequest[]
+
+  @@index([campaignType])
+}
+
+model CampaignUpdate {
+  id         String   @id @default(uuid()) @map("_id")
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  title      String   @default("")
+  body       String
+  imageUrls  String[] @default([])
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId])
+}
+
+model CampaignBankAccount {
+  id                String   @id @default(uuid()) @map("_id")
+  campaignId        String   @unique
+  campaign          Campaign @relation(fields: [campaignId], references: [id])
+  accountHolderName String
+  bankName          String
+  accountNumber     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model WithdrawalRequest {
+  id            String                  @id @default(uuid()) @map("_id")
+  campaignId    String
+  campaign      Campaign                @relation(fields: [campaignId], references: [id])
+  requestedById String
+  requestedBy   User                    @relation(fields: [requestedById], references: [id])
+  amount        Float
+  status        WithdrawalRequestStatus @default(REQUESTED)
+  adminNote     String                  @default("")
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+model Comment {
+  id               String                  @id @default(uuid()) @map("_id")
+  campaignId       String
+  campaign         Campaign                @relation(fields: [campaignId], references: [id])
+  authorId         String
+  author           User                    @relation(fields: [authorId], references: [id])
+  body             String
+  moderationStatus CommentModerationStatus @default(PENDING)
+  createdAt        DateTime                @default(now())
+}
+
+model ContactMessage {
+  id        String                 @id @default(uuid()) @map("_id")
+  createdAt DateTime               @default(now())
+  name      String
+  email     String
+  category  ContactMessageCategory
+  message   String
+
+  @@index([createdAt])
+}
+
+model Donation {
+  id                      String                     @id @default(uuid()) @map("_id")
+  campaignId              String
+  campaign                Campaign                   @relation(fields: [campaignId], references: [id])
+  donorDisplayName        String
+  amount                  Float
+  trackingNumber          String                     @default("")
+  branch                  String                     @default("")
+  fundraisingReference    String                     @default("")
+  /** Set when paid via Stripe Checkout — used for webhook idempotency */
+  stripeCheckoutSessionId String?                    @unique
+  /** Set when paid via embedded Payment Element — webhook idempotency */
+  stripePaymentIntentId   String?                    @unique
+  /** PayMongo PaymentIntent id (QR Ph / wallets) — webhook + sync idempotency */
+  paymongoPaymentIntentId String?                    @unique
+  verificationStatus      DonationVerificationStatus @default(PENDING)
+  /** When true, public donor list masks the amount (gift still counts toward raised total). */
+  hideAmountPublic        Boolean                    @default(false)
+  createdAt               DateTime                   @default(now())
+}
