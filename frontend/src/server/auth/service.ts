@@ -1,4 +1,4 @@
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import {
   OrganizationMemberRole,
   UserRole,
@@ -79,7 +79,7 @@ export async function register(
       memberCount === 0 ? OrganizationMemberRole.ADMIN : OrganizationMemberRole.MEMBER;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = bcrypt.hashSync(password, 10);
   const user = await prisma.user.create({
     data: {
       email,
@@ -99,7 +99,7 @@ export async function login(email: string, password: string) {
     include: { organization: { select: userOrgSelect } },
   });
   if (!user) throw new AuthHttpError(401, "Invalid credentials");
-  const ok = await bcrypt.compare(password, user.passwordHash);
+  const ok = bcrypt.compareSync(password, user.passwordHash);
   if (!ok) throw new AuthHttpError(401, "Invalid credentials");
   return sign(user as UserWithOrg);
 }
@@ -148,9 +148,9 @@ export async function updateMe(
       select: { passwordHash: true },
     });
     if (!row) throw new AuthHttpError(401, "Unauthorized");
-    const ok = await bcrypt.compare(dto.currentPassword, row.passwordHash);
+    const ok = bcrypt.compareSync(dto.currentPassword, row.passwordHash);
     if (!ok) throw new AuthHttpError(401, "Current password is incorrect.");
-    data.passwordHash = await bcrypt.hash(newPassword, 10);
+    data.passwordHash = bcrypt.hashSync(newPassword, 10);
   }
 
   const user = await prisma.user.update({

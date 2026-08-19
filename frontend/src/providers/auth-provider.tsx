@@ -67,6 +67,12 @@ function parseApiError(data: unknown): string {
   return 'Request failed';
 }
 
+const FETCH_MS = 12_000;
+
+function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+  return fetch(input, { ...init, signal: AbortSignal.timeout(FETCH_MS) });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -81,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(null);
       return;
     }
-    const res = await fetch(`${base}/auth/me`, {
+    const res = await fetchWithTimeout(`${base}/auth/me`, {
       headers: { Authorization: `Bearer ${t}` },
     });
     if (!res.ok) {
@@ -114,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (patch.currentPassword !== undefined) body.currentPassword = patch.currentPassword;
     if (patch.profilePhotoUrl !== undefined) body.profilePhotoUrl = patch.profilePhotoUrl;
     if (Object.keys(body).length === 0) throw new Error('Nothing to update.');
-    const res = await fetch(`${base}/auth/me`, {
+    const res = await fetchWithTimeout(`${base}/auth/me`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -143,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!base || !t) throw new Error('Not signed in');
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(`${base}/auth/me/profile-photo`, {
+    const res = await fetchWithTimeout(`${base}/auth/me/profile-photo`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${t}` },
       body: fd,
@@ -163,13 +169,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refreshMe().finally(() => setLoading(false));
+    const failSafe = setTimeout(() => setLoading(false), FETCH_MS + 500);
+    void refreshMe()
+      .catch(() => {
+        setUser(null);
+        setToken(null);
+      })
+      .finally(() => {
+        clearTimeout(failSafe);
+        setLoading(false);
+      });
   }, [refreshMe]);
 
   const login = useCallback(async (email: string, password: string) => {
     const base = getClientApiBase();
     if (!base) throw new Error('NEXT_PUBLIC_API_URL is not set');
-    const res = await fetch(`${base}/auth/login`, {
+    const res = await fetchWithTimeout(`${base}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -195,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!base) throw new Error('NEXT_PUBLIC_API_URL is not set');
       const body: Record<string, string> = { fullName, email, password };
       if (inviteCode?.trim()) body.inviteCode = inviteCode.trim();
-      const res = await fetch(`${base}/auth/register`, {
+      const res = await fetchWithTimeout(`${base}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

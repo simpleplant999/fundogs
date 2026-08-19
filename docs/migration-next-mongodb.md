@@ -47,3 +47,12 @@ npm run dev
 ```
 
 Smoke: `http://localhost:3000/api/campaigns` and `/admin` (admin user).
+
+## Vercel: hung login / register / donate
+
+Those routes wait on MongoDB. If Atlas cannot be reached, the request spins until the browser times out.
+
+1. **Vercel → Project → Settings → Environment Variables** (Production): `DATABASE_URL`, `JWT_SECRET`, `NEXT_PUBLIC_API_URL=/api`. Redeploy after changing env vars.
+2. **MongoDB Atlas → Network Access**: add `0.0.0.0/0` (Allow access from anywhere). Vercel functions do not use a single IP.
+3. **Atlas connection string** must include a database name: `...mongodb.net/fundogs?...`
+4. Check `https://YOUR_DOMAIN/api/health` — it should return `{ "ok": true, "database": "connected" }` instead of hanging.

@@ -8,7 +8,7 @@ import {
   PrismaClient,
   UserRole,
 } from "@prisma/client";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -17,7 +17,7 @@ async function main() {
   const adminPassword = process.env.ADMIN_PASSWORD ?? "admin123";
   const adminName = process.env.ADMIN_NAME ?? "Site Admin";
 
-  const adminHash = await bcrypt.hash(adminPassword, 10);
+  const adminHash = bcrypt.hashSync(adminPassword, 10);
   let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (!admin) {
     admin = await prisma.user.create({
@@ -38,7 +38,7 @@ async function main() {
     demo = await prisma.user.create({
       data: {
         email: demoEmail,
-        passwordHash: await bcrypt.hash(demoPass, 10),
+        passwordHash: bcrypt.hashSync(demoPass, 10),
         fullName: "Demo Supporter",
         role: UserRole.USER,
       },
