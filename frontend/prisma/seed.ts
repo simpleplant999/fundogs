@@ -4,6 +4,7 @@ import {
   CampaignType,
   CommentModerationStatus,
   DonationVerificationStatus,
+  Prisma,
   PrismaClient,
   UserRole,
 } from "@prisma/client";
@@ -69,7 +70,7 @@ async function main() {
     });
   }
 
-  const demoCampaigns = [
+  const demoCampaigns: Prisma.CampaignUncheckedCreateInput[] = [
     {
       slug: "global-rescue-flight-manila",
       title: "Emergency flight for 12 rescued dogs",
@@ -98,7 +99,7 @@ async function main() {
         "Community-supported shelter expanding veterinary capacity for incoming rescues and local rehoming support.",
       imageUrl:
         "https://images.unsplash.com/photo-1548199973-03cce0f87e55?w=800&q=80",
-      imageUrls: [] as string[],
+      imageUrls: [],
       goalAmount: 180000,
       raisedAmount: 180000,
       lifecycleStatus: CampaignLifecycleStatus.DONE,
@@ -115,7 +116,7 @@ async function main() {
         "Keeps foster families stocked while animals await adoption. Transparent reporting monthly.",
       imageUrl:
         "https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=800&q=80",
-      imageUrls: [] as string[],
+      imageUrls: [],
       goalAmount: 95000,
       raisedAmount: 41200,
       lifecycleStatus: CampaignLifecycleStatus.PUBLISHED,
@@ -126,7 +127,7 @@ async function main() {
       authorId: admin.id,
       campaignType: CampaignType.SHELTER_DAILY_CARE,
     },
-  ] as const;
+  ];
 
   const createdIds: Record<string, string> = {};
   for (const data of demoCampaigns) {
