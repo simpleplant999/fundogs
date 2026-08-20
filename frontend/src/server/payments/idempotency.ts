@@ -1,5 +1,5 @@
-import { prisma } from "./db";
-import { isPrismaUniqueConflict } from "./prisma-errors";
+import { prisma } from "../db";
+import { isPrismaUniqueConflict } from "../prisma-errors";
 
 /**
  * Atomically claim a payment id so webhook + client sync cannot both record it.
