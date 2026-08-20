@@ -226,3 +226,12 @@ model UploadedFile {
   data      Bytes
   createdAt DateTime @default(now())
 }
+
+/**
+ * Atomic claim for recording a payment once (webhook + client sync race).
+ * `_id` is `paymongo:<pi_id>` or `stripe:<pi_or_session_id>`.
+ */
+model PaymentIdempotencyKey {
+  id        String   @id @map("_id")
+  createdAt DateTime @default(now())
+}

@@ -8,6 +8,7 @@ import { prisma } from "../db";
 import { parseHideAmountPublicMetadata } from "../donations/hide-amount";
 import { isPrismaUniqueConflict } from "../prisma-errors";
 import { PaymentHttpError } from "./errors";
+import { claimPaymentIdempotency, releasePaymentIdempotency } from "./idempotency";
 import {
   retrievePaymentIntent,
   type PaymongoPaymentIntentAttrs,
@@ -157,6 +158,13 @@ export async function recordDonationIfSucceededIntent(opts: {
     return "skipped";
   }
 
+  const claimId = `paymongo:${paymentIntentId}`;
+  const claimed = await claimPaymentIdempotency(claimId);
+  if (!claimed) {
+    console.log(`PayMongo donation already claimed for ${paymentIntentId}`);
+    return "exists";
+  }
+
   try {
     await prisma.donation.create({
       data: {
@@ -172,18 +180,16 @@ export async function recordDonationIfSucceededIntent(opts: {
         createdAt,
       },
     });
+    await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: { raisedAmount: { increment: amountPhp } },
+    });
   } catch (e) {
-    if (isPrismaUniqueConflict(e)) {
-      console.log(`PayMongo donation already present for ${paymentIntentId}`);
-      return "exists";
-    }
+    await releasePaymentIdempotency(claimId);
+    if (isPrismaUniqueConflict(e)) return "exists";
     throw e;
   }
 
-  await prisma.campaign.update({
-    where: { id: campaign.id },
-    data: { raisedAmount: { increment: amountPhp } },
-  });
   console.log(`Recorded PayMongo donation ${paymentIntentId} campaign ${slug}`);
   return "created";
 }

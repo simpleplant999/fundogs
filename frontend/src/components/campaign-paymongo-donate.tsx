@@ -273,9 +273,12 @@ export function CampaignPaymongoDonate({
     setErr(message);
   }, []);
 
+  const pollInFlightRef = useRef(false);
+
   const pollOnce = useCallback(async () => {
     const id = piRef.current;
-    if (!id) return;
+    if (!id || pollInFlightRef.current) return;
+    pollInFlightRef.current = true;
     try {
       const res = await fetch(`${donationsPath}/sync-paymongo`, {
         method: 'POST',
@@ -300,6 +303,8 @@ export function CampaignPaymongoDonate({
       if (cardConfirmingRef.current) {
         showCardPaymentError('Could not confirm your card payment. Please try again.');
       }
+    } finally {
+      pollInFlightRef.current = false;
     }
   }, [donationsPath, finishPaid, showCardPaymentError]);
 

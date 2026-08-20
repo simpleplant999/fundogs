@@ -6,6 +6,7 @@ import {
 import Stripe from "stripe";
 import { prisma } from "../db";
 import { parseHideAmountPublicMetadata } from "../donations/hide-amount";
+import { claimPaymentIdempotency, releasePaymentIdempotency } from "./idempotency";
 
 export async function dispatchVerifiedEvent(event: Stripe.Event): Promise<void> {
   console.log(`Stripe webhook received: ${event.type}`);
@@ -63,10 +64,12 @@ async function onPaymentIntentSucceeded(
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
-    const dup = await tx.donation.findFirst({ where: { stripePaymentIntentId: pi.id } });
-    if (dup) return;
-    await tx.donation.create({
+  const claimId = `stripe:pi:${pi.id}`;
+  const claimed = await claimPaymentIdempotency(claimId);
+  if (!claimed) return;
+
+  try {
+    await prisma.donation.create({
       data: {
         campaignId: campaign.id,
         donorDisplayName: donorName,
@@ -80,11 +83,14 @@ async function onPaymentIntentSucceeded(
         createdAt: new Date(eventCreatedSec * 1000),
       },
     });
-    await tx.campaign.update({
+    await prisma.campaign.update({
       where: { id: campaign.id },
       data: { raisedAmount: { increment: amountPhp } },
     });
-  });
+  } catch (e) {
+    await releasePaymentIdempotency(claimId);
+    throw e;
+  }
   console.log(`Recorded PaymentIntent donation ${pi.id} campaign ${slug}`);
 }
 
@@ -163,10 +169,12 @@ async function onCheckoutSessionCompleted(
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
-    const dup = await tx.donation.findFirst({ where: { stripeCheckoutSessionId: session.id } });
-    if (dup) return;
-    await tx.donation.create({
+  const claimId = `stripe:cs:${session.id}`;
+  const claimed = await claimPaymentIdempotency(claimId);
+  if (!claimed) return;
+
+  try {
+    await prisma.donation.create({
       data: {
         campaignId: campaign.id,
         donorDisplayName: donorName,
@@ -181,11 +189,14 @@ async function onCheckoutSessionCompleted(
         createdAt: new Date(eventCreatedSec * 1000),
       },
     });
-    await tx.campaign.update({
+    await prisma.campaign.update({
       where: { id: campaign.id },
       data: { raisedAmount: { increment: amountPhp } },
     });
-  });
+  } catch (e) {
+    await releasePaymentIdempotency(claimId);
+    throw e;
+  }
   console.log(`Recorded checkout donation for session ${session.id} campaign ${slug}`);
 }
 
